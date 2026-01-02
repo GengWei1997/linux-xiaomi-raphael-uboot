@@ -1,0 +1,107 @@
+# Ubuntu Desktop 编译工作流 - 在 Ubuntu 24.04 ARM 上运行
+name: 编译ubuntu-desktop
+
+# 手动触发，可指定参数
+on:
+  workflow_dispatch:
+    inputs:
+      kernel_version:
+        description: '内核版本号 (从 Release 下载对应版本)'
+        required: true
+        default: '6.18'
+      desktop_environment:
+        description: '桌面环境 (phosh-core, phosh-full, phosh-phone)'
+        required: true
+        default: 'phosh-full'
+        type: choice
+        options:
+          - phosh-core
+          - phosh-full
+          - phosh-phone
+
+# 工作流配置
+jobs:
+  build-ubuntu-desktop:
+    # 在 Ubuntu 24.04 ARM 上运行
+    runs-on: ubuntu-24.04-arm
+    
+    # 设置权限，允许创建 Release
+    permissions:
+      contents: write   # 允许创建 Release 和上传文件
+      packages: write   # 允许上传包（如果需要）
+    
+    # 定义环境变量
+    env:
+      BUILD_TIMESTAMP: ${{ format('{0}', github.run_id) }}-${{ github.run_number }}
+    
+    steps:
+      # 检出代码
+      - name: 检出代码
+        uses: actions/checkout@v4
+    
+      # 安装debootstrap
+      - name: 安装debootstrap
+        run: |
+          sudo apt update
+          sudo apt install -y debootstrap
+    
+      # 从 GitHub Release 下载内核包
+      - name: 下载内核编译产物
+        run: |
+          # 从 Release 下载指定版本的内核包
+          mkdir -p xiaomi-raphael-debs_${{ inputs.kernel_version }}
+          
+          # 尝试下载内核包，如果失败则继续（Release可能不存在）
+          curl -L -o xiaomi-raphael-debs_${{ inputs.kernel_version }}/linux-xiaomi-raphael.deb \
+            "https://github.com/${{ github.repository }}/releases/download/kernel-v${{ inputs.kernel_version }}/linux-xiaomi-raphael.deb" || echo "下载 linux-xiaomi-raphael.deb 失败，可能 Release 不存在"
+          
+          curl -L -o xiaomi-raphael-debs_${{ inputs.kernel_version }}/firmware-xiaomi-raphael.deb \
+            "https://github.com/${{ github.repository }}/releases/download/kernel-v${{ inputs.kernel_version }}/firmware-xiaomi-raphael.deb" || echo "下载 firmware-xiaomi-raphael.deb 失败，可能 Release 不存在"
+          
+          curl -L -o xiaomi-raphael-debs_${{ inputs.kernel_version }}/alsa-xiaomi-raphael.deb \
+            "https://github.com/${{ github.repository }}/releases/download/kernel-v${{ inputs.kernel_version }}/alsa-xiaomi-raphael.deb" || echo "下载 alsa-xiaomi-raphael.deb 失败，可能 Release 不存在"
+          
+          # 检查是否下载成功
+          echo "下载的内核包列表:"
+          ls -la xiaomi-raphael-debs_${{ inputs.kernel_version }}/ || echo "目录为空"
+      
+      # 编译 Ubuntu Desktop 镜像
+      - name: 编译 Ubuntu Desktop 镜像
+        run: |
+          sudo sh ubuntu-desktop_build.sh "${{ inputs.desktop_environment }}" "${{ inputs.kernel_version }}"
+      
+      # 获取当前时间戳
+      - name: 获取构建时间
+        id: get-timestamp
+        run: |
+          echo "timestamp=$(TZ='Asia/Shanghai' date +'%Y-%m-%d %H:%M:%S')" >> $GITHUB_OUTPUT
+      
+      # 创建 GitHub Release 并上传 Ubuntu Desktop 镜像
+      - name: 创建 Release 并上传 Ubuntu Desktop 镜像
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ubuntu-desktop-v${{ inputs.kernel_version }}-${{ inputs.desktop_environment }}
+          name: "Ubuntu Desktop 镜像 v${{ inputs.kernel_version }} (${{ inputs.desktop_environment }})"
+          body: |
+            小米 Raphael 设备 Ubuntu Desktop 镜像
+            - Ubuntu 版本: noble
+            - 内核版本: ${{ inputs.kernel_version }}
+            - 桌面环境: ${{ inputs.desktop_environment }}
+            - 构建时间: ${{ steps.get-timestamp.outputs.timestamp }}
+            - 构建 ID: ${{ env.BUILD_TIMESTAMP }}
+          draft: false
+          prerelease: false
+          files: |
+            rootfs.7z
+            xiaomi-k20pro-boot.img
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      # 上传镜像作为工作流制品
+      - name: 上传 Ubuntu Desktop 镜像作为工作流制品
+        uses: actions/upload-artifact@v4
+        with:
+          name: ubuntu-desktop-image-v${{ inputs.kernel_version }}
+          path: |
+            rootfs.7z
+            xiaomi-k20pro-boot.img
