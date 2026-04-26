@@ -7,7 +7,7 @@ SYSTEM_TYPE="${SYSTEM_TYPE:-ubuntu-server}"
 DEBIAN_TSUNING_MIRROR="${DEBIAN_TSUNING_MIRROR:-https://mirrors.tuna.tsinghua.edu.cn/debian/}"
 UBUNTU_TSUNING_MIRROR="${UBUNTU_TSUNING_MIRROR:-https://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports/}"
 
-echo "[15] 清理临时文件"
+echo "[13] 清理临时文件"
 
 export DEBIAN_FRONTEND=noninteractive
 
@@ -41,4 +41,33 @@ EOF
     fi
 fi
 
-echo "[15] 完成"
+# 展示配置文件
+echo ""
+echo "========================================== 📋 配置文件预览"
+echo "========================================== 📋"
+
+echo ""
+echo "[/etc/apt/sources.list]"
+cat rootdir/etc/apt/sources.list
+
+echo ""
+echo "[/etc/netplan/01-network-manager-all.yaml]"
+cat rootdir/etc/netplan/01-network-manager-all.yaml 2>/dev/null || echo "(文件不存在)"
+
+echo ""
+echo "[/etc/systemd/system/usb-gadget-ncm@.service]"
+cat rootdir/etc/systemd/system/usb-gadget-ncm@.service 2>/dev/null || echo "(文件不存在)"
+
+echo ""
+echo "[/etc/dnsmasq.d/usb-ncm]"
+cat rootdir/etc/dnsmasq.d/usb-ncm 2>/dev/null || echo "(文件不存在)"
+
+echo ""
+echo "[/etc/fstab]"
+cat rootdir/etc/fstab 2>/dev/null || echo "(文件不存在)"
+
+echo ""
+echo "========================================== 📋"
+echo "========================================== 📋"
+
+echo "[13] 完成"
