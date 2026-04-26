@@ -92,6 +92,10 @@ get_packages() {
       "phosh-phone")
         echo "$base_packages phosh phoc squeekboard gnome-settings-daemon gnome-control-center ofono mobian-tweaks"
         ;;
+      *)
+        # 默认返回基础包
+        echo "$base_packages"
+        ;;
     esac
   fi
 }
