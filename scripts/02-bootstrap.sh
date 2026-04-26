@@ -40,10 +40,10 @@ else
     
     if [[ "$SYSTEM_TYPE" == *"debian-"* ]]; then
         echo "  - 使用 Debian $DEBIAN_VERSION 🐧"
-        debootstrap --arch=arm64 $DEBIAN_VERSION rootdir https://mirrors.tuna.tsinghua.edu.cn/debian/
+        debootstrap --arch=arm64 $DEBIAN_VERSION rootdir http://deb.debian.org/debian/
     elif [[ "$SYSTEM_TYPE" == *"ubuntu-"* ]]; then
         echo "  - 使用 Ubuntu $UBUNTU_VERSION 🦁"
-        debootstrap --arch=arm64 $UBUNTU_VERSION rootdir https://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports/
+        debootstrap --arch=arm64 $UBUNTU_VERSION rootdir http://ports.ubuntu.com/ubuntu-ports/
     else
         echo "错误: 未识别的系统类型: $SYSTEM_TYPE"
         exit 1
