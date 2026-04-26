@@ -41,7 +41,7 @@ on:
       use_docker:
         description: '使用 Docker 加速构建'
         required: false
-        default: 'false'
+        default: 'true'
         type: choice
         options:
           - 'true'
@@ -72,7 +72,7 @@ jobs:
     runs-on: ubuntu-24.04-arm
     steps:
       - name: 检出代码
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: 检查参数
         id: check-params
@@ -113,7 +113,7 @@ jobs:
 
     steps:
       - name: 检出代码
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: 缓存 apt
         uses: actions/cache@v4
