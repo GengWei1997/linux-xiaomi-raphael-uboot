@@ -57,14 +57,29 @@
 使用统一构建脚本：
 
 ```bash
-# 构建 Debian Server 镜像
+# 构建 Debian Server 镜像（默认使用 trixie 版本）
 sudo ./build.sh debian-server 6.18
+
+# 构建指定 Debian 版本的镜像
+sudo ./build.sh debian-server 6.18 "" bookworm
+
+# 构建 Ubuntu Server 镜像（默认使用 resolute 版本）
+sudo ./build.sh ubuntu-server 6.18
+
+# 构建指定 Ubuntu 版本的镜像
+sudo ./build.sh ubuntu-server 6.18 "" noble
 
 # 构建 Ubuntu GNOME 镜像
 sudo ./build.sh ubuntu-gnome 6.18
 
+# 构建指定版本的 Ubuntu GNOME 镜像
+sudo ./build.sh ubuntu-gnome 6.18 "" 24.04
+
 # 构建 Debian Phosh 镜像（指定桌面环境）
 sudo ./build.sh debian-phosh 6.18 phosh-full
+
+# 构建指定版本的 Debian Phosh 镜像
+sudo ./build.sh debian-phosh 6.18 phosh-full trixie
 ```
 
 或者使用兼容性脚本（保持向后兼容）：
@@ -95,7 +110,8 @@ sudo ./ubuntu-server_build.sh 6.18
 3. 选择 "构建系统镜像" 工作流
 4. 点击 "Run workflow" 按钮
 5. 选择系统类型、内核版本和桌面环境（仅 Phosh）
-6. 点击 "Run workflow" 开始构建
+6. **可选**：指定 Debian 版本或 Ubuntu 版本
+7. 点击 "Run workflow" 开始构建
 
 构建完成后，镜像会自动发布到 GitHub Releases。
 

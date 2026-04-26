@@ -28,6 +28,16 @@ on:
           - phosh-core
           - phosh-full
           - phosh-phone
+      debian_version:
+        description: 'Debian 版本 (仅适用于Debian类型)'
+        required: false
+        default: 'trixie'
+        type: string
+      ubuntu_version:
+        description: 'Ubuntu 版本 (仅适用于Ubuntu类型)'
+        required: false
+        default: 'resolute'
+        type: string
   push:
     branches:
       - main
@@ -62,15 +72,21 @@ jobs:
           SYSTEM_TYPE="${{ github.event.inputs.system_type || 'ubuntu-server' }}"
           KERNEL_VERSION="${{ github.event.inputs.kernel_version || '6.18' }}"
           DESKTOP_ENV="${{ github.event.inputs.desktop_environment || 'phosh-full' }}"
+          DEBIAN_VERSION="${{ github.event.inputs.debian_version || 'trixie' }}"
+          UBUNTU_VERSION="${{ github.event.inputs.ubuntu_version || 'resolute' }}"
           
           echo "system_type=$SYSTEM_TYPE" >> $GITHUB_OUTPUT
           echo "kernel_version=$KERNEL_VERSION" >> $GITHUB_OUTPUT
           echo "desktop_environment=$DESKTOP_ENV" >> $GITHUB_OUTPUT
+          echo "debian_version=$DEBIAN_VERSION" >> $GITHUB_OUTPUT
+          echo "ubuntu_version=$UBUNTU_VERSION" >> $GITHUB_OUTPUT
 
     outputs:
       system_type: ${{ steps.check-params.outputs.system_type }}
       kernel_version: ${{ steps.check-params.outputs.kernel_version }}
       desktop_environment: ${{ steps.check-params.outputs.desktop_environment }}
+      debian_version: ${{ steps.check-params.outputs.debian_version }}
+      ubuntu_version: ${{ steps.check-params.outputs.ubuntu_version }}
 
   build:
     name: 构建镜像
@@ -80,6 +96,8 @@ jobs:
       SYSTEM_TYPE: ${{ needs.setup.outputs.system_type }}
       KERNEL_VERSION: ${{ needs.setup.outputs.kernel_version }}
       DESKTOP_ENV: ${{ needs.setup.outputs.desktop_environment }}
+      DEBIAN_VERSION: ${{ needs.setup.outputs.debian_version }}
+      UBUNTU_VERSION: ${{ needs.setup.outputs.ubuntu_version }}
 
     steps:
       - name: 检出代码
@@ -91,7 +109,7 @@ jobs:
           path: |
             /var/cache/apt/archives
             /var/lib/apt/lists
-          key: apt-${{ runner.os }}-arm64-${{ needs.setup.outputs.system_type }}-${{ hashFiles('**/build-config.sh') }}
+          key: apt-${{ runner.os }}-arm64-${{ needs.setup.outputs.system_type }}-${{ needs.setup.outputs.debian_version || needs.setup.outputs.ubuntu_version }}-${{ hashFiles('**/build-config.sh') }}
           restore-keys: |
             apt-${{ runner.os }}-arm64-${{ needs.setup.outputs.system_type }}-
 
@@ -149,9 +167,17 @@ jobs:
           chmod +x build.sh
           
           if [[ "${{ env.SYSTEM_TYPE }}" == *"phosh"* ]]; then
-            sudo ./build.sh "${{ env.SYSTEM_TYPE }}" "${{ env.KERNEL_VERSION }}" "${{ env.DESKTOP_ENV }}"
+            if [[ "${{ env.SYSTEM_TYPE }}" == *"debian-"* ]]; then
+              sudo DEBIAN_VERSION="${{ env.DEBIAN_VERSION }}" ./build.sh "${{ env.SYSTEM_TYPE }}" "${{ env.KERNEL_VERSION }}" "${{ env.DESKTOP_ENV }}" "${{ env.DEBIAN_VERSION }}"
+            else
+              sudo UBUNTU_VERSION="${{ env.UBUNTU_VERSION }}" ./build.sh "${{ env.SYSTEM_TYPE }}" "${{ env.KERNEL_VERSION }}" "${{ env.DESKTOP_ENV }}" "${{ env.UBUNTU_VERSION }}"
+            fi
           else
-            sudo ./build.sh "${{ env.SYSTEM_TYPE }}" "${{ env.KERNEL_VERSION }}"
+            if [[ "${{ env.SYSTEM_TYPE }}" == *"debian-"* ]]; then
+              sudo DEBIAN_VERSION="${{ env.DEBIAN_VERSION }}" ./build.sh "${{ env.SYSTEM_TYPE }}" "${{ env.KERNEL_VERSION }}" "" "${{ env.DEBIAN_VERSION }}"
+            else
+              sudo UBUNTU_VERSION="${{ env.UBUNTU_VERSION }}" ./build.sh "${{ env.SYSTEM_TYPE }}" "${{ env.KERNEL_VERSION }}" "" "${{ env.UBUNTU_VERSION }}"
+            fi
           fi
 
       - name: 生成 SHA256 校验和
@@ -167,7 +193,7 @@ jobs:
       - name: 上传镜像
         uses: actions/upload-artifact@v4
         with:
-          name: ${needs.setup.outputs.system_type}-rootfs-${{ env.KERNEL_VERSION }}
+          name: ${needs.setup.outputs.system_type}-rootfs-${{ env.KERNEL_VERSION }}-${{ needs.setup.outputs.debian_version || needs.setup.outputs.ubuntu_version }}
           path: |
             rootfs.7z
             rootfs.img
@@ -194,7 +220,7 @@ jobs:
       - name: 下载镜像
         uses: actions/download-artifact@v4
         with:
-          name: ${needs.setup.outputs.system_type}-rootfs-${{ needs.setup.outputs.kernel_version }}
+          name: ${needs.setup.outputs.system_type}-rootfs-${{ needs.setup.outputs.kernel_version }}-${{ needs.setup.outputs.debian_version || needs.setup.outputs.ubuntu_version }}
           path: .
 
       - name: 获取构建信息
@@ -206,11 +232,11 @@ jobs:
           case "${{ needs.setup.outputs.system_type }}" in
             "debian-*")
               OS_NAME="Debian"
-              OS_VERSION="trixie"
+              OS_VERSION="${{ needs.setup.outputs.debian_version }}"
               ;;
             "ubuntu-*")
               OS_NAME="Ubuntu"
-              OS_VERSION="resolute"
+              OS_VERSION="${{ needs.setup.outputs.ubuntu_version }}"
               ;;
           esac
           echo "os_name=$OS_NAME" >> $GITHUB_OUTPUT
@@ -226,17 +252,17 @@ jobs:
       - name: 生成Release信息
         id: release-info
         run: |
-          TAG="${{ needs.setup.outputs.system_type }}-v${{ needs.setup.outputs.kernel_version }}"
+          TAG="${{ needs.setup.outputs.system_type }}-v${{ needs.setup.outputs.kernel_version }}-${{ needs.setup.outputs.debian_version || needs.setup.outputs.ubuntu_version }}"
           if [[ "${{ needs.setup.outputs.system_type }}" == *"phosh"* ]]; then
             TAG="${TAG}-${{ needs.setup.outputs.desktop_environment }}"
           fi
           echo "tag_name=$TAG" >> $GITHUB_OUTPUT
 
-          RELEASE_NAME="${{ steps.build-info.outputs.os_name }} ${{ steps.build-info.outputs.system_category }} 镜像 v${{ needs.setup.outputs.kernel_version }}"
+          RELEASE_NAME="${{ steps.build-info.outputs.os_name }} ${{ steps.build-info.outputs.system_category }} 镜像 v${{ needs.setup.outputs.kernel_version }} (${{ steps.build-info.outputs.os_version }})"
           if [[ "${{ needs.setup.outputs.system_type }}" == *"phosh"* ]]; then
-            RELEASE_NAME="${RELEASE_NAME} (${{ needs.setup.outputs.desktop_environment }})"
+            RELEASE_NAME="${RELEASE_NAME} - ${{ needs.setup.outputs.desktop_environment }}"
           elif [[ "${{ needs.setup.outputs.system_type }}" == *"gnome"* ]]; then
-            RELEASE_NAME="${RELEASE_NAME} (GNOME)"
+            RELEASE_NAME="${RELEASE_NAME} - GNOME"
           fi
           echo "release_name=$RELEASE_NAME" >> $GITHUB_OUTPUT
 
