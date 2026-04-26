@@ -45,6 +45,7 @@ export SCRIPT_DIR
 export KERNEL_VERSION
 export DESKTOP_ENV
 export IMAGE_NAME="rootfs.img"
+export IMAGE_UUID="ee8d3593-59b1-480e-a3b6-4fefb17ee7d8"
 export HOSTNAME="xiaomi-raphael"
 export BOOT_IMG="xiaomi-k20pro-boot.img"
 export KERNEL_DEBS_DIR="xiaomi-raphael-debs_$KERNEL_VERSION"
@@ -142,7 +143,7 @@ echo "[13/14] 清理 🧹"
 "$SCRIPT_DIR/scripts/15-cleanup.sh"
 
 echo ""
-echo "[14/14] 完成镜像 ✨"
+echo "[14/14] 压缩镜像并完成 ✨"
 "$SCRIPT_DIR/scripts/16-finalize.sh"
 
 echo ""
@@ -150,5 +151,5 @@ echo "========================================== 🎉"
 echo "构建完成! 🎊"
 echo "========================================== 🎉"
 echo "产物文件:"
-ls -lh rootfs.7z rootfs-boot.7z 2>/dev/null || true
+ls -lh rootfs.7z 2>/dev/null || true
 echo "========================================== 🎉"

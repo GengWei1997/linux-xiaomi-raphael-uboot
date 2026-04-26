@@ -17,6 +17,6 @@ export DEBIAN_FRONTEND=noninteractive
 BASE_PACKAGES="$(get_packages "$SYSTEM_TYPE" "$DESKTOP_ENV")"
 
 echo "  - 安装基础包 $(echo "$BASE_PACKAGES" | tr ' ' ', ' )"
-chroot rootdir apt install -y $BASE_PACKAGES
+chroot rootdir apt -q install -y $BASE_PACKAGES
 
 echo "[06] 完成"

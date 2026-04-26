@@ -59,7 +59,7 @@ if [ -n "$DESKTOP_PACKAGES" ]; then
 fi
 
 # 执行 apt install
-chroot rootdir apt install -y $ALL_PACKAGES
+chroot rootdir apt -q install -y $ALL_PACKAGES
 
 # 设备特定配置
 sed -i '/ConditionKernelVersion/d' rootdir/lib/systemd/system/pd-mapper.service

@@ -211,8 +211,7 @@ jobs:
 
       - name: 压缩镜像
         run: |
-          7z a rootfs.7z rootfs.img
-          7z a rootfs-boot.7z xiaomi-k20pro-boot.img
+          7z a rootfs.7z rootfs.img xiaomi-k20pro-boot.img
 
       - name: 上传镜像
         uses: actions/upload-artifact@v5
@@ -220,13 +219,12 @@ jobs:
           name: ${{ steps.set-artifact-name.outputs.artifact_name }}
           path: |
             rootfs.7z
-            rootfs-boot.7z
           retention-days: 30
 
       - name: 清理临时文件
         if: always()
         run: |
-          sudo rm -f xiaomi-k20pro-boot.img alsa-xiaomi-raphael.deb 2>/dev/null || true
+          sudo rm -f alsa-xiaomi-raphael.deb 2>/dev/null || true
           sudo rm -rf rootdir 2>/dev/null || true
           rm -rf xiaomi-raphael-debs_* 2>/dev/null || true
           rm -f sha256sums.txt 2>/dev/null || true
@@ -259,13 +257,13 @@ jobs:
       - name: 生成SHA256校验和
         id: sha256
         run: |
-          SHA256_ROOTFS=$(sha256sum rootfs.7z | awk '{print $1}')
-          SHA256_BOOT=$(sha256sum rootfs-boot.7z | awk '{print $1}')
+          SHA256_ROOTFS=$(sha256sum rootfs.img | awk '{print $1}')
+          SHA256_BOOT=$(sha256sum xiaomi-k20pro-boot.img | awk '{print $1}')
           echo "sha256_rootfs=$SHA256_ROOTFS" >> $GITHUB_OUTPUT
           echo "sha256_boot=$SHA256_BOOT" >> $GITHUB_OUTPUT
           echo "SHA256 校验和:"
-          echo "rootfs.7z: $SHA256_ROOTFS"
-          echo "rootfs-boot.7z: $SHA256_BOOT"
+          echo "rootfs.img: $SHA256_ROOTFS"
+          echo "xiaomi-k20pro-boot.img: $SHA256_BOOT"
 
       - name: 获取构建信息
         id: build-info
@@ -273,16 +271,16 @@ jobs:
           TIMESTAMP=$(TZ='Asia/Shanghai' date +'%Y-%m-%d %H:%M:%S')
           echo "timestamp=$TIMESTAMP" >> $GITHUB_OUTPUT
 
-          case "${{ needs.setup.outputs.system_type }}" in
-            "debian-*")
-              OS_NAME="Debian"
-              OS_VERSION="${{ needs.setup.outputs.debian_version }}"
-              ;;
-            "ubuntu-*")
-              OS_NAME="Ubuntu"
-              OS_VERSION="${{ needs.setup.outputs.ubuntu_version }}"
-              ;;
-          esac
+          if [[ "${{ needs.setup.outputs.system_type }}" == *"debian-"* ]]; then
+            OS_NAME="Debian"
+            OS_VERSION="${{ needs.setup.outputs.debian_version }}"
+          elif [[ "${{ needs.setup.outputs.system_type }}" == *"ubuntu-"* ]]; then
+            OS_NAME="Ubuntu"
+            OS_VERSION="${{ needs.setup.outputs.ubuntu_version }}"
+          else
+            OS_NAME="Unknown"
+            OS_VERSION="unknown"
+          fi
           echo "os_name=$OS_NAME" >> $GITHUB_OUTPUT
           echo "os_version=$OS_VERSION" >> $GITHUB_OUTPUT
 
@@ -340,8 +338,8 @@ jobs:
 
           DESCRIPTION="${DESCRIPTION}SHA256 校验和：\n"
           DESCRIPTION="${DESCRIPTION}\`\`\`\n"
-          DESCRIPTION="${DESCRIPTION}rootfs.7z: ${{ steps.sha256.outputs.sha256_rootfs }}\n"
-          DESCRIPTION="${DESCRIPTION}rootfs-boot.7z: ${{ steps.sha256.outputs.sha256_boot }}\n"
+          DESCRIPTION="${DESCRIPTION}rootfs.img: ${{ steps.sha256.outputs.sha256_rootfs }}\n"
+          DESCRIPTION="${DESCRIPTION}xiaomi-k20pro-boot.img: ${{ steps.sha256.outputs.sha256_boot }}\n"
           DESCRIPTION="${DESCRIPTION}\`\`\`\n\n"
 
           if [[ "${{ needs.setup.outputs.system_type }}" == *"server"* ]]; then
@@ -378,6 +376,5 @@ jobs:
           prerelease: false
           files: |
             rootfs.7z
-            rootfs-boot.7z
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

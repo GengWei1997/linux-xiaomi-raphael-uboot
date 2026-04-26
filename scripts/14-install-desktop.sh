@@ -10,7 +10,7 @@ export DEBIAN_FRONTEND=noninteractive
 case "$DESKTOP_ENV" in
     "gnome")
         echo "  - 安装 GNOME 桌面环境"
-        chroot rootdir apt install -y gnome gnome-terminal gdm3
+        chroot rootdir apt -q install -y gnome gnome-terminal gdm3
 
         cat > rootdir/etc/gdm3/custom.conf << 'EOF'
 [daemon]
@@ -20,15 +20,15 @@ EOF
         ;;
     "phosh-core")
         echo "  - 安装 Phosh 核心组件"
-        chroot rootdir apt install -y phosh phoc squeekboard
+        chroot rootdir apt -q install -y phosh phoc squeekboard
         ;;
     "phosh-full")
         echo "  - 安装 Phosh 完整组件"
-        chroot rootdir apt install -y phosh phoc squeekboard gnome-settings-daemon gnome-control-center
+        chroot rootdir apt -q install -y phosh phoc squeekboard gnome-settings-daemon gnome-control-center
         ;;
     "phosh-phone")
         echo "  - 安装 Phosh 电话组件"
-        chroot rootdir apt install -y phosh phoc squeekboard gnome-settings-daemon gnome-control-center ofono mobian-tweaks
+        chroot rootdir apt -q install -y phosh phoc squeekboard gnome-settings-daemon gnome-control-center ofono mobian-tweaks
         ;;
     *)
         echo "  - 未知桌面环境: $DESKTOP_ENV"

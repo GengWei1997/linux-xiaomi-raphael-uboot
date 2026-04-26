@@ -7,7 +7,7 @@ export DEBIAN_FRONTEND=noninteractive
 
 DEVICE_PACKAGES="rmtfs protection-domain-mapper tqftpserv"
 
-chroot rootdir apt install -y ${DEVICE_PACKAGES}
+chroot rootdir apt -q install -y ${DEVICE_PACKAGES}
 
 sed -i '/ConditionKernelVersion/d' rootdir/lib/systemd/system/pd-mapper.service
 

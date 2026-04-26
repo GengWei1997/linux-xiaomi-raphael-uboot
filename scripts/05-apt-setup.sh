@@ -5,6 +5,6 @@ echo "[05] 更新 apt"
 
 export DEBIAN_FRONTEND=noninteractive
 
-chroot rootdir apt update
+chroot rootdir apt -q update
 
 echo "[05] 完成"

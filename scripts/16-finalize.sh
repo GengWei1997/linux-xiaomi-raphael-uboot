@@ -19,10 +19,4 @@ tune2fs -U ${IMAGE_UUID} ${IMAGE_NAME}
 
 echo 'cmdline for legacy boot: "root=PARTLABEL=userdata"'
 
-7z a rootfs.7z ${IMAGE_NAME}
-
-sha256sum ${IMAGE_NAME} > ${IMAGE_NAME}.sha256
-sha256sum rootfs.7z > rootfs.7z.sha256
-cat ${IMAGE_NAME}.sha256 rootfs.7z.sha256 > sha256sums.txt
-
 echo "[16] 完成"
