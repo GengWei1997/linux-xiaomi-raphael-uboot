@@ -1,0 +1,296 @@
+name: 构建系统镜像
+
+on:
+  workflow_dispatch:
+    inputs:
+      system_type:
+        description: '系统类型'
+        required: true
+        type: choice
+        options:
+          - debian-server
+          - debian-gnome
+          - debian-phosh
+          - ubuntu-server
+          - ubuntu-gnome
+          - ubuntu-phosh
+      kernel_version:
+        description: '内核版本号'
+        required: true
+        default: '6.18'
+        type: string
+      desktop_environment:
+        description: '桌面环境 (仅适用于Phosh版本)'
+        required: false
+        default: 'phosh-full'
+        type: choice
+        options:
+          - phosh-core
+          - phosh-full
+          - phosh-phone
+  push:
+    branches:
+      - main
+    paths:
+      - 'scripts/**'
+      - 'config/**'
+      - 'build.sh'
+      - '*.sh'
+  pull_request:
+    paths:
+      - 'scripts/**'
+      - 'config/**'
+      - 'build.sh'
+      - '*.sh'
+
+env:
+  HOSTNAME: xiaomi-raphael
+  BOOT_IMG: xiaomi-k20pro-boot.img
+
+jobs:
+  setup:
+    name: 检查依赖
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 检查参数
+        id: check-params
+        run: |
+          SYSTEM_TYPE="${{ github.event.inputs.system_type || 'ubuntu-server' }}"
+          KERNEL_VERSION="${{ github.event.inputs.kernel_version || '6.18' }}"
+          DESKTOP_ENV="${{ github.event.inputs.desktop_environment || 'phosh-full' }}"
+          
+          echo "system_type=$SYSTEM_TYPE" >> $GITHUB_OUTPUT
+          echo "kernel_version=$KERNEL_VERSION" >> $GITHUB_OUTPUT
+          echo "desktop_environment=$DESKTOP_ENV" >> $GITHUB_OUTPUT
+
+    outputs:
+      system_type: ${{ steps.check-params.outputs.system_type }}
+      kernel_version: ${{ steps.check-params.outputs.kernel_version }}
+      desktop_environment: ${{ steps.check-params.outputs.desktop_environment }}
+
+  build:
+    name: 构建镜像
+    needs: setup
+    runs-on: ubuntu-24.04-arm
+    env:
+      SYSTEM_TYPE: ${{ needs.setup.outputs.system_type }}
+      KERNEL_VERSION: ${{ needs.setup.outputs.kernel_version }}
+      DESKTOP_ENV: ${{ needs.setup.outputs.desktop_environment }}
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 缓存 apt
+        uses: actions/cache@v4
+        with:
+          path: |
+            /var/cache/apt/archives
+            /var/lib/apt/lists
+          key: apt-${{ runner.os }}-arm64-${{ needs.setup.outputs.system_type }}-${{ hashFiles('**/build-config.sh') }}
+          restore-keys: |
+            apt-${{ runner.os }}-arm64-${{ needs.setup.outputs.system_type }}-
+
+      - name: 安装构建工具
+        run: |
+          sudo apt update
+          sudo apt install -y debootstrap p7zip-full coreutils
+
+      - name: 下载内核包
+        run: |
+          mkdir -p xiaomi-raphael-debs_${{ env.KERNEL_VERSION }}
+
+          echo "正在下载内核包 (版本: ${{ env.KERNEL_VERSION }})..."
+
+          curl -sL -o xiaomi-raphael-debs_${{ env.KERNEL_VERSION }}/linux-image-xiaomi-raphael.deb \
+            "https://github.com/${{ github.repository }}/releases/download/kernel-v${{ env.KERNEL_VERSION }}/linux-image-xiaomi-raphael.deb"
+
+          curl -sL -o xiaomi-raphael-debs_${{ env.KERNEL_VERSION }}/linux-headers-xiaomi-raphael.deb \
+            "https://github.com/${{ github.repository }}/releases/download/kernel-v${{ env.KERNEL_VERSION }}/linux-headers-xiaomi-raphael.deb"
+
+          curl -sL -o xiaomi-raphael-debs_${{ env.KERNEL_VERSION }}/firmware-xiaomi-raphael.deb \
+            "https://github.com/${{ github.repository }}/releases/download/kernel-v${{ env.KERNEL_VERSION }}/firmware-xiaomi-raphael.deb"
+
+          # 桌面版本需要额外的alsa包
+          if [[ "${{ env.SYSTEM_TYPE }}" == *"phosh"* || "${{ env.SYSTEM_TYPE }}" == *"gnome"* ]]; then
+            curl -sL -o alsa-xiaomi-raphael.deb \
+              "https://github.com/${{ github.repository }}/releases/download/kernel-v${{ env.KERNEL_VERSION }}/alsa-xiaomi-raphael.deb"
+          fi
+
+      - name: 下载 boot.img
+        run: |
+          curl -sL -o xiaomi-k20pro-boot.img \
+            "https://github.com/GengWei1997/kernel-deb/releases/download/v1.0.0/xiaomi-k20pro-boot.img"
+
+      - name: 检查必要文件
+        run: |
+          echo "检查构建所需文件..."
+
+          if [ ! -f "xiaomi-k20pro-boot.img" ]; then
+            echo "错误: xiaomi-k20pro-boot.img 不存在"
+            exit 1
+          fi
+
+          if [ ! -f "xiaomi-raphael-debs_${{ env.KERNEL_VERSION }}/linux-image-xiaomi-raphael.deb" ]; then
+            echo "错误: linux-image-xiaomi-raphael.deb 不存在"
+            exit 1
+          fi
+
+          echo "所有必要文件存在"
+
+      - name: 执行构建
+        run: |
+          set -e
+
+          chmod +x build.sh
+          
+          if [[ "${{ env.SYSTEM_TYPE }}" == *"phosh"* ]]; then
+            sudo ./build.sh "${{ env.SYSTEM_TYPE }}" "${{ env.KERNEL_VERSION }}" "${{ env.DESKTOP_ENV }}"
+          else
+            sudo ./build.sh "${{ env.SYSTEM_TYPE }}" "${{ env.KERNEL_VERSION }}"
+          fi
+
+      - name: 生成 SHA256 校验和
+        run: |
+          echo "生成校验和..."
+          if [ -f "sha256sums.txt" ]; then
+            cat sha256sums.txt
+          else
+            sha256sum rootfs.img rootfs.7z > sha256sums.txt
+            cat sha256sums.txt
+          fi
+
+      - name: 上传镜像
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${needs.setup.outputs.system_type}-rootfs-${{ env.KERNEL_VERSION }}
+          path: |
+            rootfs.7z
+            rootfs.img
+            sha256sums.txt
+            xiaomi-k20pro-boot.img
+          retention-days: 30
+
+      - name: 清理临时文件
+        if: always()
+        run: |
+          sudo rm -f rootfs.img rootfs.7z xiaomi-k20pro-boot.img alsa-xiaomi-raphael.deb 2>/dev/null || true
+          sudo rm -rf rootdir 2>/dev/null || true
+          rm -rf xiaomi-raphael-debs_* 2>/dev/null || true
+
+  release:
+    name: 发布 Release
+    needs: build
+    runs-on: ubuntu-24.04-arm
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+
+    steps:
+      - name: 下载镜像
+        uses: actions/download-artifact@v4
+        with:
+          name: ${needs.setup.outputs.system_type}-rootfs-${{ needs.setup.outputs.kernel_version }}
+          path: .
+
+      - name: 获取构建信息
+        id: build-info
+        run: |
+          TIMESTAMP=$(TZ='Asia/Shanghai' date +'%Y-%m-%d %H:%M:%S')
+          echo "timestamp=$TIMESTAMP" >> $GITHUB_OUTPUT
+
+          case "${{ needs.setup.outputs.system_type }}" in
+            "debian-*")
+              OS_NAME="Debian"
+              OS_VERSION="trixie"
+              ;;
+            "ubuntu-*")
+              OS_NAME="Ubuntu"
+              OS_VERSION="resolute"
+              ;;
+          esac
+          echo "os_name=$OS_NAME" >> $GITHUB_OUTPUT
+          echo "os_version=$OS_VERSION" >> $GITHUB_OUTPUT
+
+          if [[ "${{ needs.setup.outputs.system_type }}" == *"server"* ]]; then
+            SYSTEM_CATEGORY="Server"
+          else
+            SYSTEM_CATEGORY="Desktop"
+          fi
+          echo "system_category=$SYSTEM_CATEGORY" >> $GITHUB_OUTPUT
+
+      - name: 生成Release信息
+        id: release-info
+        run: |
+          TAG="${{ needs.setup.outputs.system_type }}-v${{ needs.setup.outputs.kernel_version }}"
+          if [[ "${{ needs.setup.outputs.system_type }}" == *"phosh"* ]]; then
+            TAG="${TAG}-${{ needs.setup.outputs.desktop_environment }}"
+          fi
+          echo "tag_name=$TAG" >> $GITHUB_OUTPUT
+
+          RELEASE_NAME="${{ steps.build-info.outputs.os_name }} ${{ steps.build-info.outputs.system_category }} 镜像 v${{ needs.setup.outputs.kernel_version }}"
+          if [[ "${{ needs.setup.outputs.system_type }}" == *"phosh"* ]]; then
+            RELEASE_NAME="${RELEASE_NAME} (${{ needs.setup.outputs.desktop_environment }})"
+          elif [[ "${{ needs.setup.outputs.system_type }}" == *"gnome"* ]]; then
+            RELEASE_NAME="${RELEASE_NAME} (GNOME)"
+          fi
+          echo "release_name=$RELEASE_NAME" >> $GITHUB_OUTPUT
+
+      - name: 生成Release描述
+        id: release-desc
+        run: |
+          DESCRIPTION="小米 Raphael 设备 ${{ steps.build-info.outputs.os_name }} ${{ steps.build-info.outputs.system_category }} 镜像\n"
+          DESCRIPTION="${DESCRIPTION}- 系统版本: ${{ steps.build-info.outputs.os_name }} ${{ steps.build-info.outputs.os_version }}\n"
+          DESCRIPTION="${DESCRIPTION}- 内核版本: ${{ needs.setup.outputs.kernel_version }}\n"
+          
+          if [[ "${{ needs.setup.outputs.system_type }}" == *"phosh"* ]]; then
+            DESCRIPTION="${DESCRIPTION}- 桌面环境: ${{ needs.setup.outputs.desktop_environment }}\n"
+          elif [[ "${{ needs.setup.outputs.system_type }}" == *"gnome"* ]]; then
+            DESCRIPTION="${DESCRIPTION}- 桌面环境: GNOME\n"
+          fi
+          
+          DESCRIPTION="${DESCRIPTION}- 构建时间: ${{ steps.build-info.outputs.timestamp }}\n"
+          DESCRIPTION="${DESCRIPTION}- 构建 ID: ${{ github.run_id }}-${{ github.run_number }}\n\n"
+          
+          if [[ "${{ needs.setup.outputs.system_type }}" == *"server"* ]]; then
+            DESCRIPTION="${DESCRIPTION}说明：\n"
+            DESCRIPTION="${DESCRIPTION}- 这是一个无图形界面的服务器版本\n"
+            DESCRIPTION="${DESCRIPTION}- 包含基础网络管理工具\n"
+            DESCRIPTION="${DESCRIPTION}- 已安装 SSH 服务器\n"
+            DESCRIPTION="${DESCRIPTION}- 已安装中文语言支持\n"
+            DESCRIPTION="${DESCRIPTION}- 包含必要的设备驱动和固件\n"
+          else
+            DESCRIPTION="${DESCRIPTION}说明：\n"
+            DESCRIPTION="${DESCRIPTION}- 这是一个带有图形界面的桌面版本\n"
+            if [[ "${{ needs.setup.outputs.system_type }}" == *"phosh"* ]]; then
+              DESCRIPTION="${DESCRIPTION}- 包含 ${{ needs.setup.outputs.desktop_environment }} 桌面环境\n"
+            else
+              DESCRIPTION="${DESCRIPTION}- 包含 GNOME 桌面环境\n"
+            fi
+            DESCRIPTION="${DESCRIPTION}- 已安装 SSH 服务器\n"
+            DESCRIPTION="${DESCRIPTION}- 已安装中文语言支持\n"
+            DESCRIPTION="${DESCRIPTION}- 包含必要的设备驱动和固件\n"
+          fi
+          
+          echo "description<<EOF" >> $GITHUB_OUTPUT
+          echo -e "$DESCRIPTION" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: 创建 Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.release-info.outputs.tag_name }}
+          name: ${{ steps.release-info.outputs.release_name }}
+          body: ${{ steps.release-desc.outputs.description }}
+          draft: false
+          prerelease: false
+          files: |
+            rootfs.7z
+            rootfs.img
+            sha256sums.txt
+            xiaomi-k20pro-boot.img
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

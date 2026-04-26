@@ -1,7 +1,6 @@
 #!/bin/sh
 set -e
 
-UBUNTU_VERSION="${UBUNTU_VERSION:-resolute}"
 IMAGE_SIZE="${IMAGE_SIZE:-3G}"
 IMAGE_NAME="${IMAGE_NAME:-rootfs.img}"
 
