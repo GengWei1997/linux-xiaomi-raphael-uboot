@@ -41,7 +41,7 @@ on:
       use_docker:
         description: '使用 Docker 加速构建'
         required: false
-        default: 'true'
+        default: 'false'
         type: choice
         options:
           - 'true'
@@ -128,20 +128,11 @@ jobs:
       - name: 安装构建工具
         run: |
           sudo apt update
-          sudo apt install -y debootstrap p7zip-full coreutils
-
-      - name: 检查 Docker 服务
-        if: ${{ needs.setup.outputs.use_docker == 'true' }}
-        run: |
-          if ! command -v docker &> /dev/null; then
-            echo "错误: Docker 未安装"
-            exit 1
+          if [ "${{ needs.setup.outputs.use_docker }}" != "true" ]; then
+            sudo apt install -y debootstrap p7zip-full coreutils
+          else
+            sudo apt install -y p7zip-full coreutils
           fi
-          if ! docker info &> /dev/null; then
-            echo "错误: Docker 服务未运行"
-            exit 1
-          fi
-          echo "Docker 服务正常 ✅"
 
       - name: 下载内核包
         run: |
