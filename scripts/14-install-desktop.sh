@@ -10,9 +10,8 @@ export DEBIAN_FRONTEND=noninteractive
 case "$DESKTOP_ENV" in
     "gnome")
         echo "  - 安装 GNOME 桌面环境"
-        # 确保已安装基础�?        chroot rootdir apt install -y gnome gnome-terminal gdm3
-        
-        # 配置 GDM 自动登录
+        chroot rootdir apt install -y gnome gnome-terminal gdm3
+
         cat > rootdir/etc/gdm3/custom.conf << 'EOF'
 [daemon]
 AutomaticLoginEnable=true

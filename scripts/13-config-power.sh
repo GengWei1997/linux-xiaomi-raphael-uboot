@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "[13] 配置电源管理和熄�?
+echo "[13] 配置电源管理和熄屏"
 
 chroot rootdir systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target
 
@@ -19,7 +19,7 @@ leijun() {
     else
         setterm --blank force --term linux </dev/tty1
     fi
-    echo "屏幕已关�?
+    echo "屏幕已关闭"
 }
 
 jinfan() {
@@ -28,7 +28,7 @@ jinfan() {
     else
         setterm --blank poke --term linux </dev/tty1
     fi
-    echo "屏幕已开�?
+    echo "屏幕已开启"
 }
 EOF
 

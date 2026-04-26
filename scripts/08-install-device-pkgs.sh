@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "[08] 安装设备特定软件�?
+echo "[08] 安装设备特定软件包"
 
 export DEBIAN_FRONTEND=noninteractive
 
