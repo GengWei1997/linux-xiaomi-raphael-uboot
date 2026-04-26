@@ -53,11 +53,11 @@ system_config() {
 # 镜像源配置
 sources_config() {
   case "$1" in
-    "debian-*")
+    debian-*)
       echo "DEBIAN_MIRROR=https://mirrors.tuna.tsinghua.edu.cn/debian/"
       echo "DEBIAN_SECURITY_MIRROR=http://security.debian.org/debian-security"
       ;;
-    "ubuntu-*")
+    ubuntu-*)
       echo "UBUNTU_MIRROR=https://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports/"
       echo "UBUNTU_SECURITY_MIRROR=http://ports.ubuntu.com/ubuntu-ports/"
       ;;
@@ -72,10 +72,10 @@ get_packages() {
   base_packages="bash-completion sudo apt-utils ssh openssh-server nano network-manager systemd-boot initramfs-tools chrony curl wget locales tzdata dnsmasq iptables iproute2"
   
   case "$system_type" in
-    "debian-*")
+    debian-*)
       base_packages="$base_packages fonts-wqy-microhei"
       ;;
-    "ubuntu-*")
+    ubuntu-*)
       base_packages="$base_packages language-pack-zh-hans"
       ;;
   esac

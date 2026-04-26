@@ -17,14 +17,20 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 . "$SCRIPT_DIR/config/build-config.sh"
 
 # 加载系统配置
+TMP_SYSTEM_CONFIG=$(mktemp)
+system_config "$SYSTEM_TYPE" "$DESKTOP_ENV" > "$TMP_SYSTEM_CONFIG"
 while IFS= read -r line; do
     export "$line"
-done < <(system_config "$SYSTEM_TYPE" "$DESKTOP_ENV")
+done < "$TMP_SYSTEM_CONFIG"
+rm "$TMP_SYSTEM_CONFIG"
 
 # 加载镜像源配置
+TMP_SOURCES_CONFIG=$(mktemp)
+sources_config "$SYSTEM_TYPE" > "$TMP_SOURCES_CONFIG"
 while IFS= read -r line; do
     export "$line"
-done < <(sources_config "$SYSTEM_TYPE")
+done < "$TMP_SOURCES_CONFIG"
+rm "$TMP_SOURCES_CONFIG"
 
 # 导出通用变量
 export SCRIPT_DIR
