@@ -1,235 +1,107 @@
 #!/bin/sh
-set -e  # 遇到错误立即退出
+set -e
 
-# 检查是否以 root 权限运行
-if [ "$(id -u)" -ne 0 ]
-then
-  echo "rootfs can only be built as root"
-  exit
+if [ "$(id -u)" -ne 0 ]; then
+    echo "rootfs can only be built as root"
+    exit 1
 fi
 
-# 设置 Ubuntu 版本
-UBUNTU_VERSION="resolute"
+KERNEL_VERSION="${1:-6.18}"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-# 创建根文件系统镜像
-truncate -s 3G rootfs.img
-mkfs.ext4 rootfs.img
-mkdir rootdir
-mount -o loop rootfs.img rootdir
-
-# debootstrap生成镜像
-debootstrap --arch=arm64 $UBUNTU_VERSION rootdir https://ports.ubuntu.com/ubuntu-ports/
-
-# 挂载boot
-mount -o loop xiaomi-k20pro-boot.img rootdir/boot
-
-# 绑定系统目录
-mount --bind /dev rootdir/dev
-mount --bind /dev/pts rootdir/dev/pts
-mount --bind /proc rootdir/proc
-mount --bind /sys rootdir/sys
-
-# 配置网络和主机名
-echo "nameserver 1.1.1.1" | tee rootdir/etc/resolv.conf
-echo "xiaomi-raphael" | tee rootdir/etc/hostname
-echo "127.0.0.1 localhost
-127.0.1.1 xiaomi-raphael" | tee rootdir/etc/hosts
-
-# Chroot 安装步骤
-export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:\$PATH
+export UBUNTU_VERSION="${UBUNTU_VERSION:-resolute}"
+export IMAGE_SIZE="${IMAGE_SIZE:-3G}"
+export IMAGE_NAME="${IMAGE_NAME:-rootfs.img}"
+export HOSTNAME="${HOSTNAME:-xiaomi-raphael}"
+export BOOT_IMG="${BOOT_IMG:-xiaomi-k20pro-boot.img}"
+export KERNEL_DEBS_DIR="${KERNEL_DEBS_DIR:-xiaomi-raphael-debs_$KERNEL_VERSION}"
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH
 export DEBIAN_FRONTEND=noninteractive
 
-# 配置清华镜像源
-cat > rootdir/etc/apt/sources.list << 'EOF'
-deb http://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports/ resolute main restricted universe multiverse
-deb http://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports/ resolute-updates main restricted universe multiverse
-deb http://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports/ resolute-backports main restricted universe multiverse
-deb http://ports.ubuntu.com/ubuntu-ports/ resolute-security main restricted universe multiverse
-EOF
+echo "=========================================="
+echo "Ubuntu Server ARM64 构建脚本"
+echo "=========================================="
+echo "内核版本: $KERNEL_VERSION"
+echo "Ubuntu 版本: $UBUNTU_VERSION"
+echo "镜像大小: $IMAGE_SIZE"
+echo "=========================================="
 
-# 更新系统
-chroot rootdir apt update
-chroot rootdir apt upgrade -y
-
-# 安装基础软件包
-chroot rootdir apt install -y bash-completion sudo apt-utils ssh openssh-server nano network-manager systemd-boot initramfs-tools chrony curl wget locales tzdata language-pack-zh-hans dnsmasq iptables iproute2
-
-# 设置时区和语言
-echo "Asia/Shanghai" > rootdir/etc/timezone
-chroot rootdir ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
-chroot rootdir locale-gen en_US.UTF-8 zh_CN.UTF-8
-chroot rootdir update-locale LANG=en_US.UTF-8
-
-# 配置动态语言切换（SSH使用中文，TTY使用英文）
-cat > rootdir/etc/profile.d/99-locale-fix.sh << 'EOF'
-# 如果是SSH连接，则使用中文
-if [ -n "$SSH_CONNECTION" ] || [ -n "$SSH_TTY" ]; then
-    export LANG=zh_CN.UTF-8
-    export LC_ALL=zh_CN.UTF-8
+if [ ! -f "$BOOT_IMG" ]; then
+    echo "错误: $BOOT_IMG 不存在"
+    exit 1
 fi
-EOF
-chmod +x rootdir/etc/profile.d/99-locale-fix.sh
 
-# 安装设备特定软件包
-chroot rootdir apt install -y rmtfs protection-domain-mapper tqftpserv
+if [ ! -d "$KERNEL_DEBS_DIR" ]; then
+    echo "错误: $KERNEL_DEBS_DIR 目录不存在"
+    exit 1
+fi
 
-# 修改服务配置
-sed -i '/ConditionKernelVersion/d' rootdir/lib/systemd/system/pd-mapper.service
+chmod +x "$SCRIPT_DIR/scripts"/*.sh
 
-# 复制并安装内核包（从预下载的目录）
-cp xiaomi-raphael-debs_$1/*-xiaomi-raphael.deb rootdir/tmp/
-chroot rootdir dpkg -i /tmp/linux-image-xiaomi-raphael.deb
-chroot rootdir dpkg -i /tmp/linux-headers-xiaomi-raphael.deb
-chroot rootdir dpkg -i /tmp/firmware-xiaomi-raphael.deb
-rm rootdir/tmp/*-xiaomi-raphael.deb
-chroot rootdir update-initramfs -c -k all
+echo ""
+echo "[01/15] 创建根文件系统镜像"
+"$SCRIPT_DIR/scripts/01-create-image.sh"
 
-# 配置 NCM
-cat > rootdir/etc/dnsmasq.d/usb-ncm.conf << 'EOF'
-interface=usb0
-bind-dynamic
-port=0
-dhcp-authoritative
-dhcp-range=172.16.42.2,172.16.42.254,255.255.255.0,1h
-dhcp-option=3,172.16.42.1
-EOF
-echo "net.ipv4.ip_forward=1" | tee rootdir/etc/sysctl.d/99-usb-ncm.conf
-chroot rootdir systemctl enable dnsmasq
-cat > rootdir/usr/local/sbin/setup-usb-ncm.sh << 'EOF'
-#!/bin/sh
-set -e
-modprobe libcomposite
-mountpoint -q /sys/kernel/config || mount -t configfs none /sys/kernel/config
-G=/sys/kernel/config/usb_gadget/g1
-mkdir -p $G
-echo 0x1d6b > $G/idVendor
-echo 0x0104 > $G/idProduct
-echo 0x0200 > $G/bcdUSB
-mkdir -p $G/strings/0x409
-echo xiaomi-raphael > $G/strings/0x409/manufacturer
-echo NCM > $G/strings/0x409/product
-echo $(cat /etc/machine-id) > $G/strings/0x409/serialnumber
-mkdir -p $G/configs/c.1
-mkdir -p $G/configs/c.1/strings/0x409
-echo NCM > $G/configs/c.1/strings/0x409/configuration
-mkdir -p $G/functions/ncm.usb0
-ln -sf $G/functions/ncm.usb0 $G/configs/c.1/
-UDC=$(ls /sys/class/udc | head -n 1)
-echo $UDC > $G/UDC
-ip link set usb0 up
-ip addr add 172.16.42.1/24 dev usb0 || true
-OUT=$(ip route get 1.1.1.1 | awk '{print $5; exit}')
-sysctl -w net.ipv4.ip_forward=1
-iptables -t nat -C POSTROUTING -o $OUT -j MASQUERADE || iptables -t nat -A POSTROUTING -o $OUT -j MASQUERADE
-iptables -C FORWARD -i $OUT -o usb0 -m state --state RELATED,ESTABLISHED -j ACCEPT || iptables -A FORWARD -i $OUT -o usb0 -m state --state RELATED,ESTABLISHED -j ACCEPT
-iptables -C FORWARD -i usb0 -o $OUT -j ACCEPT || iptables -A FORWARD -i usb0 -o $OUT -j ACCEPT
-systemctl restart dnsmasq || true
-EOF
-chmod +x rootdir/usr/local/sbin/setup-usb-ncm.sh
-cat > rootdir/etc/systemd/system/usb-ncm.service << 'EOF'
-[Unit]
-Description=USB CDC-NCM gadget setup
-After=network.target
-DefaultDependencies=no
+echo ""
+echo "[02/15] 安装基础系统"
+"$SCRIPT_DIR/scripts/02-bootstrap.sh"
 
-[Service]
-Type=oneshot
-ExecStart=/usr/local/sbin/setup-usb-ncm.sh
-RemainAfterExit=yes
+echo ""
+echo "[03/15] 挂载系统目录"
+"$SCRIPT_DIR/scripts/03-mount-dev.sh"
 
-[Install]
-WantedBy=multi-user.target
-EOF
-chroot rootdir systemctl enable usb-ncm
+echo ""
+echo "[04/15] 配置网络"
+"$SCRIPT_DIR/scripts/04-config-network.sh"
 
-# 配置 fstab
-echo "PARTLABEL=userdata / ext4 errors=remount-ro,x-systemd.growfs 0 1
-PARTLABEL=cache /boot vfat umask=0077 0 1" | tee rootdir/etc/fstab
+echo ""
+echo "[05/15] 配置 apt 源"
+"$SCRIPT_DIR/scripts/05-apt-setup.sh"
 
-# 创建默认用户
-echo "root:1234" | chroot rootdir chpasswd
-chroot rootdir useradd -m -G sudo -s /bin/bash user
-echo "user:1234" | chroot rootdir chpasswd
+echo ""
+echo "[06/15] 安装基础软件包"
+"$SCRIPT_DIR/scripts/06-install-packages.sh"
 
-# 允许SSH root登录
-echo "PermitRootLogin yes" | tee -a rootdir/etc/ssh/sshd_config
-echo "PasswordAuthentication yes" | tee -a rootdir/etc/ssh/sshd_config
+echo ""
+echo "[07/15] 配置语言和时区"
+"$SCRIPT_DIR/scripts/07-config-locale.sh"
 
-# 彻底禁用系统休眠
-chroot rootdir systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target
+echo ""
+echo "[08/15] 安装设备特定包"
+"$SCRIPT_DIR/scripts/08-install-device-pkgs.sh"
 
-# 配置 Netplan 使用 NetworkManager
-cat > rootdir/etc/netplan/01-network-manager-all.yaml << 'EOF'
-network:
-  version: 2
-  renderer: NetworkManager
-EOF
+echo ""
+echo "[09/15] 安装内核"
+"$SCRIPT_DIR/scripts/09-install-kernel.sh"
 
-# 添加屏幕管理命令到全局bash配置
-cat >> rootdir/etc/bash.bashrc << 'EOF'
-# 屏幕管理命令
-leijun() {
-    if [ -n "$SSH_CONNECTION" ] || [ -n "$SSH_TTY" ]; then
-        sudo sh -c 'TERM=linux setterm --blank force </dev/tty1'
-    else
-        setterm --blank force --term linux </dev/tty1
-    fi
-    echo "屏幕已关闭"
-}
+echo ""
+echo "[10/15] 配置 USB NCM"
+"$SCRIPT_DIR/scripts/10-config-ncm.sh"
 
-jinfan() {
-    if [ -n "$SSH_CONNECTION" ] || [ -n "$SSH_TTY" ]; then
-        sudo sh -c 'TERM=linux setterm --blank poke </dev/tty1'
-    else
-        setterm --blank poke --term linux </dev/tty1
-    fi
-    echo "屏幕已开启"
-}
-EOF
+echo ""
+echo "[11/15] 配置 fstab"
+"$SCRIPT_DIR/scripts/11-config-fstab.sh"
 
-# 配置开机 15 秒后自动熄屏的 Systemd 服务
-cat > rootdir/etc/systemd/system/blank_screen.service << 'EOF'
-[Unit]
-Description=Auto-blank screen after 15s
-After=multi-user.target
+echo ""
+echo "[12/15] 创建用户"
+"$SCRIPT_DIR/scripts/12-create-users.sh"
 
-[Service]
-Type=simple
-ExecStartPre=/bin/bash -c "/usr/bin/sleep 15"
-ExecStart=sh -c 'TERM=linux setterm --blank force </dev/tty1'
-User=root
-Restart=on-failure
-RestartSec=5s
+echo ""
+echo "[13/15] 配置电源管理"
+"$SCRIPT_DIR/scripts/13-config-power.sh"
 
-[Install]
-WantedBy=multi-user.target
-EOF
-chroot rootdir systemctl enable blank_screen.service
+echo ""
+echo "[14/15] 清理"
+"$SCRIPT_DIR/scripts/14-cleanup.sh"
 
-# 清理 apt 缓存
-chroot rootdir apt clean
+echo ""
+echo "[15/15] 完成镜像"
+"$SCRIPT_DIR/scripts/15-finalize.sh"
 
-# 重命名 boot 文件
-mv rootdir/boot/initrd.img-* rootdir/boot/initramfs
-mv rootdir/boot/vmlinuz-* rootdir/boot/linux.efi
-
-# 删除 wifi 证书
-rm -f rootdir/lib/firmware/reg*
-
-# 卸载所有挂载点
-umount rootdir/sys
-umount rootdir/proc
-umount rootdir/dev/pts
-umount rootdir/dev
-umount rootdir/boot
-umount rootdir
-
-rm -d rootdir
-
-# 设置文件系统 UUID
-tune2fs -U ee8d3593-59b1-480e-a3b6-4fefb17ee7d8 rootfs.img
-
-echo 'cmdline for legacy boot: "root=PARTLABEL=userdata"'
-
-# 压缩 rootfs 镜像
-7z a rootfs.7z rootfs.img
+echo ""
+echo "=========================================="
+echo "构建完成!"
+echo "=========================================="
+echo "产物文件:"
+ls -lh rootfs.7z rootfs.img xiaomi-k20pro-boot.img sha256sums.txt 2>/dev/null || true
+echo "=========================================="

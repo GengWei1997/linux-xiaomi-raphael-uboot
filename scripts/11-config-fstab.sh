@@ -1,0 +1,9 @@
+#!/bin/sh
+set -e
+
+echo "[11] 配置 fstab"
+
+echo "PARTLABEL=userdata / ext4 errors=remount-ro,x-systemd.growfs 0 1
+PARTLABEL=cache /boot vfat umask=0077 0 1" > rootdir/etc/fstab
+
+echo "[11] 完成"
