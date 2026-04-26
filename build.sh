@@ -1,11 +1,6 @@
 #!/bin/sh
 set -e
 
-if [ "$(id -u)" -ne 0 ]; then
-    echo "rootfs can only be built as root"
-    exit 1
-fi
-
 # 解析参数
 SYSTEM_TYPE="${1:?请指定系统类型}"
 KERNEL_VERSION="${2:-6.18}"
@@ -19,6 +14,10 @@ elif [[ "$SYSTEM_TYPE" == "ubuntu-"* ]]; then
     UBUNTU_VERSION="${4:-resolute}"
     export UBUNTU_VERSION
 fi
+
+# 解析构建模式参数
+USE_DOCKER="${5:-false}"
+export USE_DOCKER
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
@@ -67,6 +66,11 @@ fi
 echo "镜像大小: $IMAGE_SIZE 💾"
 if [ "$IS_DESKTOP" = "true" ]; then
     echo "桌面环境: $DESKTOP_ENV 🎨"
+fi
+if [ "$USE_DOCKER" = "true" ]; then
+    echo "构建模式: Docker 加速模式 ⚡"
+else
+    echo "构建模式: 标准模式 (debootstrap) 🛠️"
 fi
 echo "========================================== 🎉"
 

@@ -38,7 +38,8 @@
 - **软件**：
   - Ubuntu 22.04+ 或 Debian 11+
   - root 权限
-  - debootstrap
+  - debootstrap（标准模式）
+  - Docker（Docker 加速模式）
   - p7zip-full
   - coreutils
   - curl
@@ -52,7 +53,7 @@
 ./scripts/download-deps.sh 6.18
 ```
 
-### 2. 构建镜像
+### 2. 标准构建模式
 
 使用统一构建脚本：
 
@@ -82,17 +83,22 @@ sudo ./build.sh debian-phosh 6.18 phosh-full
 sudo ./build.sh debian-phosh 6.18 phosh-full trixie
 ```
 
-或者使用兼容性脚本（保持向后兼容）：
+### 3. Docker 加速构建模式 ⚡
+
+使用 Docker 官方镜像可以显著加快构建速度：
 
 ```bash
-# 构建 Debian Server 镜像
-sudo ./debian-server_build.sh 6.18
+# 使用 Docker 加速模式构建 Ubuntu Server 镜像
+sudo ./build.sh ubuntu-server 6.18 "" noble true
 
-# 构建 Ubuntu Server 镜像
-sudo ./ubuntu-server_build.sh 6.18
+# 使用 Docker 加速模式构建 Debian GNOME 镜像
+sudo ./build.sh debian-gnome 6.18 "" trixie true
+
+# 使用 Docker 加速模式构建 Ubuntu Phosh 镜像
+sudo ./build.sh ubuntu-phosh 6.18 phosh-full noble true
 ```
 
-### 3. 构建产物
+### 4. 构建产物
 
 构建完成后，会生成以下文件：
 
@@ -111,7 +117,8 @@ sudo ./ubuntu-server_build.sh 6.18
 4. 点击 "Run workflow" 按钮
 5. 选择系统类型、内核版本和桌面环境（仅 Phosh）
 6. **可选**：指定 Debian 版本或 Ubuntu 版本
-7. 点击 "Run workflow" 开始构建
+7. **可选**：启用 "使用 Docker 加速构建"
+8. 点击 "Run workflow" 开始构建
 
 构建完成后，镜像会自动发布到 GitHub Releases。
 
@@ -160,10 +167,22 @@ sudo ./ubuntu-server_build.sh 6.18
 
 ## 注意事项
 
-1. 构建过程需要较大的磁盘空间（至少 10GB）
-2. 首次构建时间较长（约 30-60 分钟）
-3. 请确保有稳定的网络连接
-4. 构建完成后，使用 `dd` 命令将镜像写入存储设备
+1. **构建速度**：
+   - 标准模式（debootstrap）：30-60 分钟
+   - Docker 加速模式：1-2 分钟 ⚡
+
+2. **磁盘空间**：构建过程需要较大的磁盘空间（至少 10GB）
+
+3. **网络连接**：
+   - 标准模式：需要稳定的网络连接
+   - Docker 模式：依赖 Docker 镜像拉取速度
+
+4. **Docker 要求**：使用 Docker 加速模式时，需要：
+   - 安装 Docker
+   - 启动 Docker 服务
+   - 当前用户加入 docker 组或使用 root 权限
+
+5. **镜像写入**：构建完成后，使用 `dd` 命令将镜像写入存储设备
 
 ```bash
 dd if=rootfs.img of=/dev/sdX bs=1M status=progress
@@ -177,6 +196,9 @@ dd if=rootfs.img of=/dev/sdX bs=1M status=progress
 2. **权限错误**：确保以 root 权限运行构建脚本
 3. **网络错误**：检查网络连接和镜像源配置
 4. **磁盘空间不足**：确保有足够的磁盘空间
+5. **Docker 相关错误**：
+   - 确保 Docker 已安装并运行
+   - 确保当前用户有 Docker 访问权限
 
 ### 日志查看
 

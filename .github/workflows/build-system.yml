@@ -38,6 +38,14 @@ on:
         required: false
         default: 'resolute'
         type: string
+      use_docker:
+        description: '使用 Docker 加速构建'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
   push:
     branches:
       - main
@@ -74,12 +82,14 @@ jobs:
           DESKTOP_ENV="${{ github.event.inputs.desktop_environment || 'phosh-full' }}"
           DEBIAN_VERSION="${{ github.event.inputs.debian_version || 'trixie' }}"
           UBUNTU_VERSION="${{ github.event.inputs.ubuntu_version || 'resolute' }}"
+          USE_DOCKER="${{ github.event.inputs.use_docker || 'false' }}"
           
           echo "system_type=$SYSTEM_TYPE" >> $GITHUB_OUTPUT
           echo "kernel_version=$KERNEL_VERSION" >> $GITHUB_OUTPUT
           echo "desktop_environment=$DESKTOP_ENV" >> $GITHUB_OUTPUT
           echo "debian_version=$DEBIAN_VERSION" >> $GITHUB_OUTPUT
           echo "ubuntu_version=$UBUNTU_VERSION" >> $GITHUB_OUTPUT
+          echo "use_docker=$USE_DOCKER" >> $GITHUB_OUTPUT
 
     outputs:
       system_type: ${{ steps.check-params.outputs.system_type }}
@@ -87,6 +97,7 @@ jobs:
       desktop_environment: ${{ steps.check-params.outputs.desktop_environment }}
       debian_version: ${{ steps.check-params.outputs.debian_version }}
       ubuntu_version: ${{ steps.check-params.outputs.ubuntu_version }}
+      use_docker: ${{ steps.check-params.outputs.use_docker }}
 
   build:
     name: 构建镜像
@@ -98,6 +109,7 @@ jobs:
       DESKTOP_ENV: ${{ needs.setup.outputs.desktop_environment }}
       DEBIAN_VERSION: ${{ needs.setup.outputs.debian_version }}
       UBUNTU_VERSION: ${{ needs.setup.outputs.ubuntu_version }}
+      USE_DOCKER: ${{ needs.setup.outputs.use_docker }}
 
     steps:
       - name: 检出代码
@@ -117,6 +129,19 @@ jobs:
         run: |
           sudo apt update
           sudo apt install -y debootstrap p7zip-full coreutils
+
+      - name: 检查 Docker 服务
+        if: ${{ needs.setup.outputs.use_docker == 'true' }}
+        run: |
+          if ! command -v docker &> /dev/null; then
+            echo "错误: Docker 未安装"
+            exit 1
+          fi
+          if ! docker info &> /dev/null; then
+            echo "错误: Docker 服务未运行"
+            exit 1
+          fi
+          echo "Docker 服务正常 ✅"
 
       - name: 下载内核包
         run: |
@@ -168,15 +193,15 @@ jobs:
           
           if [[ "${{ env.SYSTEM_TYPE }}" == *"phosh"* ]]; then
             if [[ "${{ env.SYSTEM_TYPE }}" == *"debian-"* ]]; then
-              sudo DEBIAN_VERSION="${{ env.DEBIAN_VERSION }}" ./build.sh "${{ env.SYSTEM_TYPE }}" "${{ env.KERNEL_VERSION }}" "${{ env.DESKTOP_ENV }}" "${{ env.DEBIAN_VERSION }}"
+              sudo DEBIAN_VERSION="${{ env.DEBIAN_VERSION }}" USE_DOCKER="${{ env.USE_DOCKER }}" ./build.sh "${{ env.SYSTEM_TYPE }}" "${{ env.KERNEL_VERSION }}" "${{ env.DESKTOP_ENV }}" "${{ env.DEBIAN_VERSION }}" "${{ env.USE_DOCKER }}"
             else
-              sudo UBUNTU_VERSION="${{ env.UBUNTU_VERSION }}" ./build.sh "${{ env.SYSTEM_TYPE }}" "${{ env.KERNEL_VERSION }}" "${{ env.DESKTOP_ENV }}" "${{ env.UBUNTU_VERSION }}"
+              sudo UBUNTU_VERSION="${{ env.UBUNTU_VERSION }}" USE_DOCKER="${{ env.USE_DOCKER }}" ./build.sh "${{ env.SYSTEM_TYPE }}" "${{ env.KERNEL_VERSION }}" "${{ env.DESKTOP_ENV }}" "${{ env.UBUNTU_VERSION }}" "${{ env.USE_DOCKER }}"
             fi
           else
             if [[ "${{ env.SYSTEM_TYPE }}" == *"debian-"* ]]; then
-              sudo DEBIAN_VERSION="${{ env.DEBIAN_VERSION }}" ./build.sh "${{ env.SYSTEM_TYPE }}" "${{ env.KERNEL_VERSION }}" "" "${{ env.DEBIAN_VERSION }}"
+              sudo DEBIAN_VERSION="${{ env.DEBIAN_VERSION }}" USE_DOCKER="${{ env.USE_DOCKER }}" ./build.sh "${{ env.SYSTEM_TYPE }}" "${{ env.KERNEL_VERSION }}" "" "${{ env.DEBIAN_VERSION }}" "${{ env.USE_DOCKER }}"
             else
-              sudo UBUNTU_VERSION="${{ env.UBUNTU_VERSION }}" ./build.sh "${{ env.SYSTEM_TYPE }}" "${{ env.KERNEL_VERSION }}" "" "${{ env.UBUNTU_VERSION }}"
+              sudo UBUNTU_VERSION="${{ env.UBUNTU_VERSION }}" USE_DOCKER="${{ env.USE_DOCKER }}" ./build.sh "${{ env.SYSTEM_TYPE }}" "${{ env.KERNEL_VERSION }}" "" "${{ env.UBUNTU_VERSION }}" "${{ env.USE_DOCKER }}"
             fi
           fi
 
@@ -193,7 +218,7 @@ jobs:
       - name: 上传镜像
         uses: actions/upload-artifact@v4
         with:
-          name: ${needs.setup.outputs.system_type}-rootfs-${{ env.KERNEL_VERSION }}-${{ needs.setup.outputs.debian_version || needs.setup.outputs.ubuntu_version }}
+          name: ${needs.setup.outputs.system_type}-rootfs-${{ env.KERNEL_VERSION }}-${{ needs.setup.outputs.debian_version || needs.setup.outputs.ubuntu_version }}${{ needs.setup.outputs.use_docker == 'true' && '-docker' || '' }}
           path: |
             rootfs.7z
             rootfs.img
@@ -220,7 +245,7 @@ jobs:
       - name: 下载镜像
         uses: actions/download-artifact@v4
         with:
-          name: ${needs.setup.outputs.system_type}-rootfs-${{ needs.setup.outputs.kernel_version }}-${{ needs.setup.outputs.debian_version || needs.setup.outputs.ubuntu_version }}
+          name: ${needs.setup.outputs.system_type}-rootfs-${{ needs.setup.outputs.kernel_version }}-${{ needs.setup.outputs.debian_version || needs.setup.outputs.ubuntu_version }}${{ needs.setup.outputs.use_docker == 'true' && '-docker' || '' }}
           path: .
 
       - name: 获取构建信息
@@ -256,6 +281,9 @@ jobs:
           if [[ "${{ needs.setup.outputs.system_type }}" == *"phosh"* ]]; then
             TAG="${TAG}-${{ needs.setup.outputs.desktop_environment }}"
           fi
+          if [[ "${{ needs.setup.outputs.use_docker }}" == "true" ]]; then
+            TAG="${TAG}-docker"
+          fi
           echo "tag_name=$TAG" >> $GITHUB_OUTPUT
 
           RELEASE_NAME="${{ steps.build-info.outputs.os_name }} ${{ steps.build-info.outputs.system_category }} 镜像 v${{ needs.setup.outputs.kernel_version }} (${{ steps.build-info.outputs.os_version }})"
@@ -263,6 +291,9 @@ jobs:
             RELEASE_NAME="${RELEASE_NAME} - ${{ needs.setup.outputs.desktop_environment }}"
           elif [[ "${{ needs.setup.outputs.system_type }}" == *"gnome"* ]]; then
             RELEASE_NAME="${RELEASE_NAME} - GNOME"
+          fi
+          if [[ "${{ needs.setup.outputs.use_docker }}" == "true" ]]; then
+            RELEASE_NAME="${RELEASE_NAME} [Docker 加速]"
           fi
           echo "release_name=$RELEASE_NAME" >> $GITHUB_OUTPUT
 
@@ -277,6 +308,12 @@ jobs:
             DESCRIPTION="${DESCRIPTION}- 桌面环境: ${{ needs.setup.outputs.desktop_environment }}\n"
           elif [[ "${{ needs.setup.outputs.system_type }}" == *"gnome"* ]]; then
             DESCRIPTION="${DESCRIPTION}- 桌面环境: GNOME\n"
+          fi
+          
+          if [[ "${{ needs.setup.outputs.use_docker }}" == "true" ]]; then
+            DESCRIPTION="${DESCRIPTION}- 构建模式: Docker 加速模式 ⚡\n"
+          else
+            DESCRIPTION="${DESCRIPTION}- 构建模式: 标准模式 (debootstrap) 🛠️\n"
           fi
           
           DESCRIPTION="${DESCRIPTION}- 构建时间: ${{ steps.build-info.outputs.timestamp }}\n"
