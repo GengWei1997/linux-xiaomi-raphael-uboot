@@ -17,7 +17,7 @@ on:
       kernel_version:
         description: '内核版本号'
         required: true
-        default: '6.18'
+        default: '7.0'
         type: string
       desktop_environment:
         description: '桌面环境 (仅适用于Phosh版本)'
@@ -37,6 +37,11 @@ on:
         description: 'Ubuntu 版本 (仅适用于Ubuntu类型)'
         required: false
         default: 'resolute'
+        type: string
+      kernel_repository:
+        description: '内核包仓库 (默认: GengWei1997/linux-xiaomi-raphael-uboot)'
+        required: false
+        default: 'GengWei1997/linux-xiaomi-raphael-uboot'
         type: string
       use_docker:
         description: '使用 Docker 加速构建'
@@ -84,6 +89,7 @@ jobs:
           DEBIAN_VERSION="${{ github.event.inputs.debian_version || 'trixie' }}"
           UBUNTU_VERSION="${{ github.event.inputs.ubuntu_version || 'resolute' }}"
           USE_DOCKER="${{ github.event.inputs.use_docker || 'false' }}"
+          KERNEL_REPO="${{ github.event.inputs.kernel_repository || 'GengWei1997/kernel-deb' }}"
 
           echo "system_type=$SYSTEM_TYPE" >> $GITHUB_OUTPUT
           echo "kernel_version=$KERNEL_VERSION" >> $GITHUB_OUTPUT
@@ -91,6 +97,7 @@ jobs:
           echo "debian_version=$DEBIAN_VERSION" >> $GITHUB_OUTPUT
           echo "ubuntu_version=$UBUNTU_VERSION" >> $GITHUB_OUTPUT
           echo "use_docker=$USE_DOCKER" >> $GITHUB_OUTPUT
+          echo "kernel_repo=$KERNEL_REPO" >> $GITHUB_OUTPUT
 
     outputs:
       system_type: ${{ steps.check-params.outputs.system_type }}
@@ -99,6 +106,7 @@ jobs:
       debian_version: ${{ steps.check-params.outputs.debian_version }}
       ubuntu_version: ${{ steps.check-params.outputs.ubuntu_version }}
       use_docker: ${{ steps.check-params.outputs.use_docker }}
+      kernel_repo: ${{ steps.check-params.outputs.kernel_repo }}
 
   build:
     name: 构建镜像
@@ -111,6 +119,7 @@ jobs:
       DEBIAN_VERSION: ${{ needs.setup.outputs.debian_version }}
       UBUNTU_VERSION: ${{ needs.setup.outputs.ubuntu_version }}
       USE_DOCKER: ${{ needs.setup.outputs.use_docker }}
+      KERNEL_REPO: ${{ needs.setup.outputs.kernel_repo }}
 
     steps:
       - name: 检出代码
@@ -134,24 +143,24 @@ jobs:
           echo "正在下载内核包 (版本: ${{ env.KERNEL_VERSION }})..."
 
           curl -sL -o xiaomi-raphael-debs_${{ env.KERNEL_VERSION }}/linux-image-xiaomi-raphael.deb \
-            "https://github.com/${{ github.repository }}/releases/download/kernel-v${{ env.KERNEL_VERSION }}/linux-image-xiaomi-raphael.deb"
+            "https://github.com/${{ env.KERNEL_REPO }}/releases/download/kernel-v${{ env.KERNEL_VERSION }}/linux-image-xiaomi-raphael.deb"
 
           curl -sL -o xiaomi-raphael-debs_${{ env.KERNEL_VERSION }}/linux-headers-xiaomi-raphael.deb \
-            "https://github.com/${{ github.repository }}/releases/download/kernel-v${{ env.KERNEL_VERSION }}/linux-headers-xiaomi-raphael.deb"
+            "https://github.com/${{ env.KERNEL_REPO }}/releases/download/kernel-v${{ env.KERNEL_VERSION }}/linux-headers-xiaomi-raphael.deb"
 
           curl -sL -o xiaomi-raphael-debs_${{ env.KERNEL_VERSION }}/firmware-xiaomi-raphael.deb \
-            "https://github.com/${{ github.repository }}/releases/download/kernel-v${{ env.KERNEL_VERSION }}/firmware-xiaomi-raphael.deb"
+            "https://github.com/${{ env.KERNEL_REPO }}/releases/download/kernel-v${{ env.KERNEL_VERSION }}/firmware-xiaomi-raphael.deb"
 
           # 桌面版本需要额外的alsa包
           if [[ "${{ env.SYSTEM_TYPE }}" == *"phosh"* || "${{ env.SYSTEM_TYPE }}" == *"gnome"* ]]; then
             curl -sL -o alsa-xiaomi-raphael.deb \
-              "https://github.com/${{ github.repository }}/releases/download/kernel-v${{ env.KERNEL_VERSION }}/alsa-xiaomi-raphael.deb"
+              "https://github.com/${{ env.KERNEL_REPO }}/releases/download/kernel-v${{ env.KERNEL_VERSION }}/alsa-xiaomi-raphael.deb"
           fi
 
       - name: 下载 boot.img
         run: |
           curl -sL -o xiaomi-k20pro-boot.img \
-            "https://github.com/GengWei1997/kernel-deb/releases/download/v1.0.0/xiaomi-k20pro-boot.img"
+            "https://github.com/${{ env.KERNEL_REPO }}/releases/download/v1.0.0/xiaomi-k20pro-boot.img"
 
       - name: 检查必要文件
         run: |
