@@ -106,7 +106,7 @@ echo "[04/16] 配置网络 🌐"
 "$SCRIPT_DIR/scripts/04-config-network.sh"
 
 echo ""
-echo "[05/16] 配置 apt 源 📡"
+echo "[05/16] 更新 apt 📡"
 "$SCRIPT_DIR/scripts/05-apt-setup.sh"
 
 echo ""
