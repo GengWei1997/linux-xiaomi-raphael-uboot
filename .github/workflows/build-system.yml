@@ -209,6 +209,12 @@ jobs:
           echo "artifact_name=$ARTIFACT_NAME" >> $GITHUB_OUTPUT
           echo "Artifact 名称: $ARTIFACT_NAME"
 
+      - name: 生成SHA256校验和
+        run: |
+          echo "生成校验和..."
+          sha256sum rootfs.img xiaomi-k20pro-boot.img > sha256sums.txt
+          cat sha256sums.txt
+
       - name: 压缩镜像
         run: |
           7z a rootfs.7z rootfs.img xiaomi-k20pro-boot.img
@@ -219,6 +225,7 @@ jobs:
           name: ${{ steps.set-artifact-name.outputs.artifact_name }}
           path: |
             rootfs.7z
+            sha256sums.txt
           retention-days: 30
 
       - name: 清理临时文件
@@ -227,7 +234,6 @@ jobs:
           sudo rm -f alsa-xiaomi-raphael.deb 2>/dev/null || true
           sudo rm -rf rootdir 2>/dev/null || true
           rm -rf xiaomi-raphael-debs_* 2>/dev/null || true
-          rm -f sha256sums.txt 2>/dev/null || true
 
   release:
     name: 发布 Release
@@ -254,16 +260,15 @@ jobs:
           name: ${{ steps.set-artifact-name.outputs.artifact_name }}
           path: .
 
-      - name: 生成SHA256校验和
+      - name: 显示SHA256校验和
         id: sha256
         run: |
-          SHA256_ROOTFS=$(sha256sum rootfs.img | awk '{print $1}')
-          SHA256_BOOT=$(sha256sum xiaomi-k20pro-boot.img | awk '{print $1}')
+          echo "SHA256 校验和:"
+          cat sha256sums.txt
+          SHA256_ROOTFS=$(awk '{print $1}' sha256sums.txt | head -n1)
+          SHA256_BOOT=$(awk '{print $1}' sha256sums.txt | tail -n1)
           echo "sha256_rootfs=$SHA256_ROOTFS" >> $GITHUB_OUTPUT
           echo "sha256_boot=$SHA256_BOOT" >> $GITHUB_OUTPUT
-          echo "SHA256 校验和:"
-          echo "rootfs.img: $SHA256_ROOTFS"
-          echo "xiaomi-k20pro-boot.img: $SHA256_BOOT"
 
       - name: 获取构建信息
         id: build-info
