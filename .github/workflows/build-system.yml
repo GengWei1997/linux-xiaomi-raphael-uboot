@@ -65,6 +65,7 @@ env:
   HOSTNAME: xiaomi-raphael
   BOOT_IMG: xiaomi-k20pro-boot.img
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  SUPPRESS_DEPRECATION_WARNINGS: true
 
 jobs:
   setup:
@@ -117,7 +118,7 @@ jobs:
 
       - name: 缓存 apt
         if: ${{ needs.setup.outputs.use_docker != 'true' }}
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             /var/cache/apt/archives
@@ -210,7 +211,7 @@ jobs:
           fi
 
       - name: 上传镜像
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ${needs.setup.outputs.system_type}-rootfs-${{ env.KERNEL_VERSION }}-${{ needs.setup.outputs.debian_version || needs.setup.outputs.ubuntu_version }}${{ needs.setup.outputs.use_docker == 'true' && '-docker' || '' }}
           path: |
@@ -231,13 +232,13 @@ jobs:
     name: 发布 Release
     needs: build
     runs-on: ubuntu-24.04-arm
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'workflow_dispatch'
     permissions:
       contents: write
 
     steps:
       - name: 下载镜像
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: ${needs.setup.outputs.system_type}-rootfs-${{ needs.setup.outputs.kernel_version }}-${{ needs.setup.outputs.debian_version || needs.setup.outputs.ubuntu_version }}${{ needs.setup.outputs.use_docker == 'true' && '-docker' || '' }}
           path: .
