@@ -116,17 +116,6 @@ jobs:
       - name: 检出代码
         uses: actions/checkout@v5
 
-      - name: 缓存 apt
-        if: ${{ needs.setup.outputs.use_docker != 'true' }}
-        uses: actions/cache@v5
-        with:
-          path: |
-            /var/cache/apt/archives
-            /var/lib/apt/lists
-          key: apt-${{ runner.os }}-arm64-${{ needs.setup.outputs.system_type }}-${{ needs.setup.outputs.debian_version || needs.setup.outputs.ubuntu_version }}-${{ hashFiles('**/build-config.sh') }}
-          restore-keys: |
-            apt-${{ runner.os }}-arm64-${{ needs.setup.outputs.system_type }}-
-
       - name: 安装 debootstrap
         if: ${{ needs.setup.outputs.use_docker != 'true' }}
         run: |
@@ -210,38 +199,73 @@ jobs:
             cat sha256sums.txt
           fi
 
+      - name: 设置 artifact 名称
+        id: set-artifact-name
+        run: |
+          ARTIFACT_NAME="${{ needs.setup.outputs.system_type }}-rootfs-${{ env.KERNEL_VERSION }}-${{ needs.setup.outputs.debian_version || needs.setup.outputs.ubuntu_version }}"
+          if [ "${{ needs.setup.outputs.use_docker }}" == "true" ]; then
+            ARTIFACT_NAME="${ARTIFACT_NAME}-docker"
+          fi
+          echo "artifact_name=$ARTIFACT_NAME" >> $GITHUB_OUTPUT
+          echo "Artifact 名称: $ARTIFACT_NAME"
+
+      - name: 压缩镜像
+        run: |
+          7z a rootfs.7z rootfs.img
+          7z a rootfs-boot.7z xiaomi-k20pro-boot.img
+
       - name: 上传镜像
         uses: actions/upload-artifact@v5
         with:
-          name: ${needs.setup.outputs.system_type}-rootfs-${{ env.KERNEL_VERSION }}-${{ needs.setup.outputs.debian_version || needs.setup.outputs.ubuntu_version }}${{ needs.setup.outputs.use_docker == 'true' && '-docker' || '' }}
+          name: ${{ steps.set-artifact-name.outputs.artifact_name }}
           path: |
             rootfs.7z
-            rootfs.img
-            sha256sums.txt
-            xiaomi-k20pro-boot.img
+            rootfs-boot.7z
           retention-days: 30
 
       - name: 清理临时文件
         if: always()
         run: |
-          sudo rm -f rootfs.img rootfs.7z xiaomi-k20pro-boot.img alsa-xiaomi-raphael.deb 2>/dev/null || true
+          sudo rm -f xiaomi-k20pro-boot.img alsa-xiaomi-raphael.deb 2>/dev/null || true
           sudo rm -rf rootdir 2>/dev/null || true
           rm -rf xiaomi-raphael-debs_* 2>/dev/null || true
+          rm -f sha256sums.txt 2>/dev/null || true
 
   release:
     name: 发布 Release
-    needs: build
+    needs: [build, setup]
     runs-on: ubuntu-24.04-arm
     if: github.event_name == 'workflow_dispatch'
     permissions:
       contents: write
 
     steps:
+      - name: 设置 artifact 名称
+        id: set-artifact-name
+        run: |
+          ARTIFACT_NAME="${{ needs.setup.outputs.system_type }}-rootfs-${{ needs.setup.outputs.kernel_version }}-${{ needs.setup.outputs.debian_version || needs.setup.outputs.ubuntu_version }}"
+          if [ "${{ needs.setup.outputs.use_docker }}" == "true" ]; then
+            ARTIFACT_NAME="${ARTIFACT_NAME}-docker"
+          fi
+          echo "artifact_name=$ARTIFACT_NAME" >> $GITHUB_OUTPUT
+          echo "Artifact 名称: $ARTIFACT_NAME"
+
       - name: 下载镜像
         uses: actions/download-artifact@v5
         with:
-          name: ${needs.setup.outputs.system_type}-rootfs-${{ needs.setup.outputs.kernel_version }}-${{ needs.setup.outputs.debian_version || needs.setup.outputs.ubuntu_version }}${{ needs.setup.outputs.use_docker == 'true' && '-docker' || '' }}
+          name: ${{ steps.set-artifact-name.outputs.artifact_name }}
           path: .
+
+      - name: 生成SHA256校验和
+        id: sha256
+        run: |
+          SHA256_ROOTFS=$(sha256sum rootfs.7z | awk '{print $1}')
+          SHA256_BOOT=$(sha256sum rootfs-boot.7z | awk '{print $1}')
+          echo "sha256_rootfs=$SHA256_ROOTFS" >> $GITHUB_OUTPUT
+          echo "sha256_boot=$SHA256_BOOT" >> $GITHUB_OUTPUT
+          echo "SHA256 校验和:"
+          echo "rootfs.7z: $SHA256_ROOTFS"
+          echo "rootfs-boot.7z: $SHA256_BOOT"
 
       - name: 获取构建信息
         id: build-info
@@ -314,6 +338,12 @@ jobs:
           DESCRIPTION="${DESCRIPTION}- 构建时间: ${{ steps.build-info.outputs.timestamp }}\n"
           DESCRIPTION="${DESCRIPTION}- 构建 ID: ${{ github.run_id }}-${{ github.run_number }}\n\n"
 
+          DESCRIPTION="${DESCRIPTION}SHA256 校验和：\n"
+          DESCRIPTION="${DESCRIPTION}\`\`\`\n"
+          DESCRIPTION="${DESCRIPTION}rootfs.7z: ${{ steps.sha256.outputs.sha256_rootfs }}\n"
+          DESCRIPTION="${DESCRIPTION}rootfs-boot.7z: ${{ steps.sha256.outputs.sha256_boot }}\n"
+          DESCRIPTION="${DESCRIPTION}\`\`\`\n\n"
+
           if [[ "${{ needs.setup.outputs.system_type }}" == *"server"* ]]; then
             DESCRIPTION="${DESCRIPTION}说明：\n"
             DESCRIPTION="${DESCRIPTION}- 这是一个无图形界面的服务器版本\n"
@@ -348,8 +378,6 @@ jobs:
           prerelease: false
           files: |
             rootfs.7z
-            rootfs.img
-            sha256sums.txt
-            xiaomi-k20pro-boot.img
+            rootfs-boot.7z
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
