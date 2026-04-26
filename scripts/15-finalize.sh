@@ -4,7 +4,7 @@ set -e
 IMAGE_NAME="${IMAGE_NAME:-rootfs.img}"
 IMAGE_UUID="${IMAGE_UUID:-ee8d3593-59b1-480e-a3b6-4fefb17ee7d8}"
 
-echo "[15] 卸载并完成镜�?
+echo "[15] 卸载并完成镜�?
 
 umount rootdir/sys 2>/dev/null || true
 umount rootdir/proc 2>/dev/null || true
