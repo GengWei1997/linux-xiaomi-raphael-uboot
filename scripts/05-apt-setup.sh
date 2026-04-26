@@ -53,14 +53,7 @@ else
     exit 1
 fi
 
-# 跳过 GPG 验证以避免密钥问题
-echo "  - 跳过 GPG 验证以避免密钥问题"
-cat > rootdir/etc/apt/apt.conf.d/99no-gpg << EOF
-Acquire::AllowInsecureRepositories "true";
-Acquire::AllowDowngradeToInsecureRepositories "true";
-APT::Get::AllowUnauthenticated "true";
-EOF
-
+# 执行 apt update
 chroot rootdir apt update
 
 echo "[05] 完成"
