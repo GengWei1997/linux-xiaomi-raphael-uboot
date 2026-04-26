@@ -189,16 +189,6 @@ jobs:
             fi
           fi
 
-      - name: 生成 SHA256 校验和
-        run: |
-          echo "生成校验和..."
-          if [ -f "sha256sums.txt" ]; then
-            cat sha256sums.txt
-          else
-            sha256sum rootfs.img rootfs.7z > sha256sums.txt
-            cat sha256sums.txt
-          fi
-
       - name: 设置 artifact 名称
         id: set-artifact-name
         run: |
