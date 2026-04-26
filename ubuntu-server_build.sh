@@ -9,7 +9,7 @@ then
 fi
 
 # 设置 Ubuntu 版本
-UBUNTU_VERSION="noble"
+UBUNTU_VERSION="resolute"
 
 # 创建根文件系统镜像
 truncate -s 3G rootfs.img
@@ -18,7 +18,7 @@ mkdir rootdir
 mount -o loop rootfs.img rootdir
 
 # debootstrap生成镜像
-debootstrap --arch=arm64 $UBUNTU_VERSION rootdir https://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports/
+debootstrap --arch=arm64 $UBUNTU_VERSION rootdir https://ports.ubuntu.com/ubuntu-ports/
 
 # 挂载boot
 mount -o loop xiaomi-k20pro-boot.img rootdir/boot
