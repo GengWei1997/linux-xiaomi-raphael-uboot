@@ -160,7 +160,7 @@ jobs:
       - name: 下载 boot.img
         run: |
           curl -sL -o xiaomi-k20pro-boot.img \
-            "https://github.com/${{ env.KERNEL_REPO }}/releases/download/v1.0.0/xiaomi-k20pro-boot.img"
+            "https://github.com/GengWei1997/kernel-deb/releases/download/v1.0.0/xiaomi-k20pro-boot.img"
 
       - name: 检查必要文件
         run: |
