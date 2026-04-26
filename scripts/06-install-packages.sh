@@ -2,7 +2,7 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-CONFIG_DIR=""$SCRIPT_DIR/../config"
+CONFIG_DIR="$SCRIPT_DIR/../config"
 
 # 加载配置文件
 . "$CONFIG_DIR/build-config.sh"
