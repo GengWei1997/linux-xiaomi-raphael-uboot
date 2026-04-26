@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 set -e
 
 DEBIAN_VERSION="${DEBIAN_VERSION:-trixie}"
@@ -10,7 +10,7 @@ USE_DOCKER="${USE_DOCKER:-false}"
 echo "[02] 安装基础系统 🚀"
 
 if [ "$USE_DOCKER" = "true" ]; then
-    echo "  - 使用 Docker 加速模式 ⚡"
+    echo "  - 使用 Docker 加速模�?�?
     
     if [[ "$SYSTEM_TYPE" == *"debian-"* ]]; then
         echo "  - 使用 Debian $DEBIAN_VERSION 官方镜像 🐧"
@@ -36,7 +36,7 @@ if [ "$USE_DOCKER" = "true" ]; then
     docker rm tmp_rootfs_builder
     
 else
-    echo "  - 使用 debootstrap 构建基础系统 🛠️"
+    echo "  - 使用 debootstrap 构建基础系统 🛠�?
     
     if [[ "$SYSTEM_TYPE" == *"debian-"* ]]; then
         echo "  - 使用 Debian $DEBIAN_VERSION 🐧"
@@ -57,4 +57,4 @@ else
     echo "[02] 警告: ${BOOT_IMG} 不存在，跳过 boot 挂载 ⚠️"
 fi
 
-echo "[02] 完成 ✅"
+echo "[02] 完成 �?

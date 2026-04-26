@@ -1,5 +1,5 @@
-#!/bin/sh
-# 兼容性脚本 - 调用新的统一构建框架
+#!/bin/bash
+# 兼容性脚�?- 调用新的统一构建框架
 
 SYSTEM_TYPE="debian-phosh"
 DESKTOP_ENV="${1:-phosh-full}"

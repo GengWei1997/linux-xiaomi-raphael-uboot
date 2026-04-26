@@ -1,7 +1,7 @@
 #!/bin/bash
-set -e  # 遇到错误立即退出
+set -e  # 遇到错误立即退�?
 
-# 克隆指定版本的内核源码
+# 克隆指定版本的内核源�?
 git clone https://github.com/GengWei1997/linux.git --branch raphael-$1 --depth 1 linux
 
 # 应用 builddeb 补丁
@@ -22,7 +22,7 @@ make -j$(nproc) ARCH=arm64 LLVM=-21 deb-pkg
 
 cd ..
 
-# 重命名生成的 deb 包
+# 重命名生成的 deb �?
 IMAGE_DEB=$(ls -1 linux-image-*.deb 2>/dev/null | grep -v '\-dbg_' | head -n1)
 HEADERS_DEB=$(ls -1 linux-headers-*.deb 2>/dev/null | head -n1)
 
@@ -36,6 +36,6 @@ fi
 # 清理源码目录
 rm -rf linux
 
-# 构建 deb 包
+# 构建 deb �?
 dpkg-deb --build --root-owner-group firmware-xiaomi-raphael
 dpkg-deb --build --root-owner-group alsa-xiaomi-raphael

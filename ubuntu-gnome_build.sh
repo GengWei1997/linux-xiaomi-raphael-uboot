@@ -1,5 +1,5 @@
-#!/bin/sh
-set -e  # 遇到错误立即退出
+#!/bin/bash
+set -e  # 遇到错误立即退�?
 
 # 检查是否以 root 权限运行
 if [ "$(id -u)" -ne 0 ]
@@ -11,7 +11,7 @@ fi
 # 设置 Ubuntu 版本
 UBUNTU_VERSION="noble"
 
-# 创建根文件系统镜像
+# 创建根文件系统镜�?
 truncate -s 6G rootfs.img
 mkfs.ext4 rootfs.img
 mkdir rootdir
@@ -39,7 +39,7 @@ echo "127.0.0.1 localhost
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:\$PATH
 export DEBIAN_FRONTEND=noninteractive
 
-# 配置清华镜像源
+# 配置清华镜像�?
 cat > rootdir/etc/apt/sources.list << 'EOF'
 deb http://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports/ noble main restricted universe multiverse
 deb http://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports/ noble-updates main restricted universe multiverse
@@ -54,10 +54,10 @@ chroot rootdir apt upgrade -y
 # 安装基础软件包和 Ubuntu Desktop
 chroot rootdir apt install -y bash-completion sudo apt-utils ssh openssh-server nano systemd-boot initramfs-tools chrony curl wget dnsmasq iptables iproute2 ubuntu-desktop
 
-# 安装设备特定软件包
+# 安装设备特定软件�?
 chroot rootdir apt install -y rmtfs protection-domain-mapper tqftpserv
 
-# 安装语言包和设置默认语言为简体中文
+# 安装语言包和设置默认语言为简体中�?
 chroot rootdir apt install -y locales locales-all tzdata
 chroot rootdir apt install -y \
     fonts-arphic-uming \
@@ -91,7 +91,7 @@ chroot rootdir dpkg-reconfigure -f noninteractive tzdata
 # 修改服务配置
 sed -i '/ConditionKernelVersion/d' rootdir/lib/systemd/system/pd-mapper.service
 
-# 复制并安装内核包（从预下载的目录）
+# 复制并安装内核包（从预下载的目录�?
 cp xiaomi-raphael-debs_$1/*-xiaomi-raphael.deb rootdir/tmp/
 chroot rootdir dpkg -i /tmp/linux-image-xiaomi-raphael.deb
 chroot rootdir dpkg -i /tmp/linux-headers-xiaomi-raphael.deb
@@ -177,7 +177,7 @@ chroot rootdir systemctl mask sleep.target suspend.target hibernate.target hybri
 # 清理 apt 缓存
 chroot rootdir apt clean
 
-# 重命名 boot 文件
+# 重命�?boot 文件
 mv rootdir/boot/initrd.img-* rootdir/boot/initramfs
 mv rootdir/boot/vmlinuz-* rootdir/boot/linux.efi
 
@@ -201,3 +201,4 @@ echo 'cmdline for legacy boot: "root=PARTLABEL=userdata"'
 
 # 压缩 rootfs 镜像
 7z a rootfs.7z rootfs.img
+

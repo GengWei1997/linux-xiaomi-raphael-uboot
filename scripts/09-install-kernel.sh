@@ -1,9 +1,9 @@
-#!/bin/sh
+#!/bin/bash
 set -e
 
 KERNEL_DEBS_DIR="${KERNEL_DEBS_DIR:-.}"
 
-echo "[09] 安装内核包"
+echo "[09] 安装内核�?
 
 cp ${KERNEL_DEBS_DIR}/*-xiaomi-raphael.deb rootdir/tmp/
 chroot rootdir dpkg -i /tmp/linux-image-xiaomi-raphael.deb

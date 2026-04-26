@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 set -e
 
 # 解析参数
@@ -6,11 +6,10 @@ SYSTEM_TYPE="${1:?请指定系统类型}"
 KERNEL_VERSION="${2:-6.18}"
 DESKTOP_ENV="${3:-phosh-full}"
 
-# 解析发行版版本参数
-if [[ "$SYSTEM_TYPE" == "debian-"* ]]; then
+# 解析发行版版本参�?if [[ "$SYSTEM_TYPE" == *"debian-"* ]]; then
     DEBIAN_VERSION="${4:-trixie}"
     export DEBIAN_VERSION
-elif [[ "$SYSTEM_TYPE" == "ubuntu-"* ]]; then
+elif [[ "$SYSTEM_TYPE" == *"ubuntu-"* ]]; then
     UBUNTU_VERSION="${4:-resolute}"
     export UBUNTU_VERSION
 fi
@@ -32,8 +31,7 @@ while IFS= read -r line; do
 done < "$TMP_SYSTEM_CONFIG"
 rm "$TMP_SYSTEM_CONFIG"
 
-# 加载镜像源配置
-TMP_SOURCES_CONFIG=$(mktemp)
+# 加载镜像源配�?TMP_SOURCES_CONFIG=$(mktemp)
 sources_config "$SYSTEM_TYPE" > "$TMP_SOURCES_CONFIG"
 while IFS= read -r line; do
     export "$line"
@@ -56,7 +54,7 @@ export SYSTEM_TYPE
 echo "========================================== 🎉"
 echo "系统镜像构建脚本"
 echo "========================================== 🎉"
-echo "系统类型: $SYSTEM_TYPE 🖥️"
+echo "系统类型: $SYSTEM_TYPE 🖥�?
 echo "内核版本: $KERNEL_VERSION 🧠"
 if [ -n "$DEBIAN_VERSION" ]; then
     echo "Debian 版本: $DEBIAN_VERSION 🐧"
@@ -68,29 +66,27 @@ if [ "$IS_DESKTOP" = "true" ]; then
     echo "桌面环境: $DESKTOP_ENV 🎨"
 fi
 if [ "$USE_DOCKER" = "true" ]; then
-    echo "构建模式: Docker 加速模式 ⚡"
+    echo "构建模式: Docker 加速模�?�?
 else
-    echo "构建模式: 标准模式 (debootstrap) 🛠️"
+    echo "构建模式: 标准模式 (debootstrap) 🛠�?
 fi
 echo "========================================== 🎉"
 
-# 检查必要文件
-if [ ! -f "$BOOT_IMG" ]; then
-    echo "错误: $BOOT_IMG 不存在 ❌"
+# 检查必要文�?if [ ! -f "$BOOT_IMG" ]; then
+    echo "错误: $BOOT_IMG 不存�?�?
     exit 1
 fi
 
 if [ ! -d "$KERNEL_DEBS_DIR" ]; then
-    echo "错误: $KERNEL_DEBS_DIR 目录不存在 ❌"
+    echo "错误: $KERNEL_DEBS_DIR 目录不存�?�?
     exit 1
 fi
 
-# 确保脚本可执行
-chmod +x "$SCRIPT_DIR/scripts"/*.sh
+# 确保脚本可执�?chmod +x "$SCRIPT_DIR/scripts"/*.sh
 
 # 执行构建步骤
 echo ""
-echo "[01/16] 创建根文件系统镜像 📦"
+echo "[01/16] 创建根文件系统镜�?📦"
 "$SCRIPT_DIR/scripts/01-create-image.sh"
 
 echo ""
@@ -106,19 +102,19 @@ echo "[04/16] 配置网络 🌐"
 "$SCRIPT_DIR/scripts/04-config-network.sh"
 
 echo ""
-echo "[05/16] 配置 apt 源 📡"
+echo "[05/16] 配置 apt �?📡"
 "$SCRIPT_DIR/scripts/05-apt-setup.sh"
 
 echo ""
-echo "[06/16] 安装基础软件包 📚"
+echo "[06/16] 安装基础软件�?📚"
 "$SCRIPT_DIR/scripts/06-install-packages.sh"
 
 echo ""
-echo "[07/16] 配置语言和时区 🌍"
+echo "[07/16] 配置语言和时�?🌍"
 "$SCRIPT_DIR/scripts/07-config-locale.sh"
 
 echo ""
-echo "[08/16] 安装设备特定包 🔧"
+echo "[08/16] 安装设备特定�?🔧"
 "$SCRIPT_DIR/scripts/08-install-device-pkgs.sh"
 
 echo ""
@@ -130,7 +126,7 @@ echo "[10/16] 配置 USB NCM 📱"
 "$SCRIPT_DIR/scripts/10-config-ncm.sh"
 
 echo ""
-echo "[11/16] 配置 fstab 🗂️"
+echo "[11/16] 配置 fstab 🗂�?
 "$SCRIPT_DIR/scripts/11-config-fstab.sh"
 
 echo ""
@@ -155,7 +151,7 @@ echo "[15/16] 清理 🧹"
 "$SCRIPT_DIR/scripts/15-cleanup.sh"
 
 echo ""
-echo "[16/16] 完成镜像 ✨"
+echo "[16/16] 完成镜像 �?
 "$SCRIPT_DIR/scripts/16-finalize.sh"
 
 echo ""
