@@ -11,7 +11,10 @@ echo "[02] 安装基础系统 🚀"
 
 if [ "$USE_DOCKER" = "true" ]; then
     echo "  - 使用 Docker 加速模式 ⚡"
-    
+
+    # 启用 Docker BuildKit
+    export DOCKER_BUILDKIT=1
+
     if [[ "$SYSTEM_TYPE" == *"debian-"* ]]; then
         echo "  - 使用 Debian $DEBIAN_VERSION 官方镜像 🐧"
         DOCKER_IMAGE="debian:$DEBIAN_VERSION"
@@ -22,16 +25,16 @@ if [ "$USE_DOCKER" = "true" ]; then
         echo "错误: 未识别的系统类型: $SYSTEM_TYPE"
         exit 1
     fi
-    
+
     echo "  - 拉取 Docker 镜像 📥"
     docker pull "$DOCKER_IMAGE"
-    
+
     echo "  - 运行临时容器 📦"
     docker run --name tmp_rootfs_builder "$DOCKER_IMAGE" /bin/true
-    
+
     echo "  - 导出 rootfs 镜像 📤"
     docker export tmp_rootfs_builder | tar -x -C rootdir/
-    
+
     echo "  - 清理临时容器 🧹"
     docker rm tmp_rootfs_builder
 

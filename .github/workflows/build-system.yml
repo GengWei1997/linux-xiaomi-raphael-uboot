@@ -136,31 +136,41 @@ jobs:
             echo "debootstrap 已安装，跳过"
           fi
 
-      - name: 下载内核包
+      - name: 下载内核包和boot.img (并行)
         run: |
           mkdir -p xiaomi-raphael-debs_${{ env.KERNEL_VERSION }}
 
-          echo "正在下载内核包 (版本: ${{ env.KERNEL_VERSION }})..."
+          echo "正在下载内核包和boot.img (版本: ${{ env.KERNEL_VERSION }})..."
 
+          # 并行下载内核包
           curl -sL -o xiaomi-raphael-debs_${{ env.KERNEL_VERSION }}/linux-image-xiaomi-raphael.deb \
-            "https://github.com/${{ env.KERNEL_REPO }}/releases/download/kernel-v${{ env.KERNEL_VERSION }}/linux-image-xiaomi-raphael.deb"
+            "https://github.com/${{ env.KERNEL_REPO }}/releases/download/kernel-v${{ env.KERNEL_VERSION }}/linux-image-xiaomi-raphael.deb" &
+          PID1=$!
 
           curl -sL -o xiaomi-raphael-debs_${{ env.KERNEL_VERSION }}/linux-headers-xiaomi-raphael.deb \
-            "https://github.com/${{ env.KERNEL_REPO }}/releases/download/kernel-v${{ env.KERNEL_VERSION }}/linux-headers-xiaomi-raphael.deb"
+            "https://github.com/${{ env.KERNEL_REPO }}/releases/download/kernel-v${{ env.KERNEL_VERSION }}/linux-headers-xiaomi-raphael.deb" &
+          PID2=$!
 
           curl -sL -o xiaomi-raphael-debs_${{ env.KERNEL_VERSION }}/firmware-xiaomi-raphael.deb \
-            "https://github.com/${{ env.KERNEL_REPO }}/releases/download/kernel-v${{ env.KERNEL_VERSION }}/firmware-xiaomi-raphael.deb"
+            "https://github.com/${{ env.KERNEL_REPO }}/releases/download/kernel-v${{ env.KERNEL_VERSION }}/firmware-xiaomi-raphael.deb" &
+          PID3=$!
+
+          curl -sL -o xiaomi-k20pro-boot.img \
+            "https://github.com/${{ env.KERNEL_REPO }}/releases/download/v1.0.0/xiaomi-k20pro-boot.img" &
+          PID4=$!
 
           # 桌面版本需要额外的alsa包
           if [[ "${{ env.SYSTEM_TYPE }}" == *"phosh"* || "${{ env.SYSTEM_TYPE }}" == *"gnome"* ]]; then
             curl -sL -o alsa-xiaomi-raphael.deb \
-              "https://github.com/${{ env.KERNEL_REPO }}/releases/download/kernel-v${{ env.KERNEL_VERSION }}/alsa-xiaomi-raphael.deb"
+              "https://github.com/${{ env.KERNEL_REPO }}/releases/download/kernel-v${{ env.KERNEL_VERSION }}/alsa-xiaomi-raphael.deb" &
+            PID5=$!
           fi
 
-      - name: 下载 boot.img
-        run: |
-          curl -sL -o xiaomi-k20pro-boot.img \
-            "https://github.com/GengWei1997/kernel-deb/releases/download/v1.0.0/xiaomi-k20pro-boot.img"
+          # 等待所有下载完成
+          wait $PID1 $PID2 $PID3 $PID4
+          [ -n "$PID5" ] && wait $PID5 || true
+
+          echo "所有文件下载完成 ✅"
 
       - name: 检查必要文件
         run: |
