@@ -17,8 +17,11 @@ on:
       kernel_version:
         description: '内核版本号'
         required: true
+        type: choice
+        options:
+          - '6.18'
+          - '7.0'
         default: '7.0'
-        type: string
       desktop_environment:
         description: '桌面环境 (仅适用于Phosh版本)'
         required: false
@@ -31,13 +34,19 @@ on:
       debian_version:
         description: 'Debian 版本 (仅适用于Debian类型)'
         required: false
+        type: choice
+        options:
+          - trixie
+          - bookworm
         default: 'trixie'
-        type: string
       ubuntu_version:
         description: 'Ubuntu 版本 (仅适用于Ubuntu类型)'
         required: false
+        type: choice
+        options:
+          - noble
+          - resolute
         default: 'resolute'
-        type: string
       kernel_repository:
         description: '内核包仓库 (默认: GengWei1997/linux-xiaomi-raphael-uboot)'
         required: false
@@ -84,8 +93,8 @@ jobs:
         run: |
           if ! command -v mmdebstrap &> /dev/null; then
             echo "安装 mmdebstrap..."
-            sudo apt update -q
-            sudo apt install -q -y mmdebstrap
+            sudo apt update
+            sudo apt install -y mmdebstrap
           else
             echo "mmdebstrap 已安装，跳过"
           fi
