@@ -34,7 +34,10 @@ if [ "$USE_DOCKER" = "true" ]; then
     
     echo "  - 清理临时容器 🧹"
     docker rm tmp_rootfs_builder
-    
+
+    echo "  - 创建 boot 目录结构 📁"
+    mkdir -p rootdir/boot
+
 else
     echo "  - 使用 debootstrap 构建基础系统 🛠️"
     
@@ -52,9 +55,16 @@ fi
 
 if [ -f "${BOOT_IMG}" ]; then
     echo "[02] 挂载 boot 分区 (${BOOT_IMG}) 📁"
-    mount -o loop ${BOOT_IMG} rootdir/boot
+    # 尝试挂载，失败则报错退出
+    if mount -o loop ${BOOT_IMG} rootdir/boot 2>&1; then
+        echo "[02] Boot 分区挂载成功 ✅"
+    else
+        echo "[02] 错误: Boot 分区挂载失败 ❌"
+        exit 1
+    fi
 else
-    echo "[02] 警告: ${BOOT_IMG} 不存在，跳过 boot 挂载 ⚠️"
+    echo "[02] 错误: ${BOOT_IMG} 不存在 ❌"
+    exit 1
 fi
 
 echo "[02] 完成 ✅"
