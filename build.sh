@@ -68,11 +68,7 @@ echo "镜像大小: $IMAGE_SIZE 💾"
 if [ "$IS_DESKTOP" = "true" ]; then
     echo "桌面环境: $DESKTOP_ENV 🎨"
 fi
-if [ "$USE_DOCKER" = "true" ]; then
-    echo "构建模式: Docker 加速模式 ⚡"
-else
     echo "构建模式: 标准模式 (debootstrap) 🛠️"
-fi
 echo "========================================== 🎉"
 
 # 检查必要文件
