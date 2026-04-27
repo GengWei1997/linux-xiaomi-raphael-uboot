@@ -10,18 +10,10 @@ echo "[02] 安装基础系统 🚀"
 
 if [[ "$SYSTEM_TYPE" == *"debian-"* ]]; then
     echo "  - 使用 mmdebstrap 构建 Debian $DEBIAN_VERSION 🐧"
-    mmdebstrap --arch=arm64 \
-        --include=apt-utils,ca-certificates,curl,wget,gnupg \
-        $DEBIAN_VERSION \
-        rootdir \
-        http://deb.debian.org/debian/
+    mmdebstrap $DEBIAN_VERSION rootdir
 elif [[ "$SYSTEM_TYPE" == *"ubuntu-"* ]]; then
     echo "  - 使用 mmdebstrap 构建 Ubuntu $UBUNTU_VERSION 🦁"
-    mmdebstrap --arch=arm64 \
-        --include=apt-utils,ca-certificates,curl,wget,gnupg \
-        $UBUNTU_VERSION \
-        rootdir \
-        http://ports.ubuntu.com/ubuntu-ports/
+    mmdebstrap $UBUNTU_VERSION rootdir
 else
     echo "错误: 未识别的系统类型: $SYSTEM_TYPE"
     exit 1
