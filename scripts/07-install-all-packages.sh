@@ -8,19 +8,25 @@ CONFIG_DIR="$SCRIPT_DIR/../config"
 
 SYSTEM_TYPE="${SYSTEM_TYPE:-ubuntu-server}"
 DESKTOP_ENV="${DESKTOP_ENV:-}"
+DEBIAN_VERSION="${DEBIAN_VERSION:-trixie}"
+UBUNTU_VERSION="${UBUNTU_VERSION:-resolute}"
 
 echo "[06] 安装所有软件包 📦"
 
 export DEBIAN_FRONTEND=noninteractive
 
-# 基础包
-BASE_PACKAGES="bash-completion sudo apt-utils ssh openssh-server nano network-manager systemd-boot initramfs-tools chrony curl wget locales tzdata dnsmasq iproute2"
+# 更新系统
+chroot rootdir apt update
+chroot rootdir apt upgrade -y
+
+# 基础包（根据发行版选择）
+BASE_PACKAGES="bash-completion sudo apt-utils ssh openssh-server nano network-manager initramfs-tools chrony curl wget locales tzdata iproute2"
 
 # 根据发行版添加特定包
 if [[ "$SYSTEM_TYPE" == *"debian-"* ]]; then
-    BASE_PACKAGES="$BASE_PACKAGES fonts-wqy-microhei"
+    BASE_PACKAGES="$BASE_PACKAGES systemd-boot dnsmasq fonts-wqy-microhei"
 elif [[ "$SYSTEM_TYPE" == *"ubuntu-"* ]]; then
-    BASE_PACKAGES="$BASE_PACKAGES language-pack-zh-hans iptables"
+    BASE_PACKAGES="$BASE_PACKAGES systemd-boot dnsmasq-base language-pack-zh-hans iptables"
 fi
 
 # 设备特定包
@@ -58,8 +64,8 @@ if [ -n "$DESKTOP_PACKAGES" ]; then
     echo "  - 安装桌面包 $(echo "$DESKTOP_PACKAGES" | tr ' ' ', ')"
 fi
 
-# 执行 apt install
-chroot rootdir apt -q install -y  --ignore-missing $ALL_PACKAGES
+# 执行 apt install，使用 --ignore-missing 跳过不存在的包
+chroot rootdir apt install -y --ignore-missing $ALL_PACKAGES || true
 
 # Debian构建时修复可能的dpkg错误（shim-signed:arm64冲突）
 if [[ "$SYSTEM_TYPE" == *"debian-"* ]]; then
@@ -71,7 +77,7 @@ if [[ "$SYSTEM_TYPE" == *"debian-"* ]]; then
 fi
 
 # 设备特定配置
-sed -i '/ConditionKernelVersion/d' rootdir/lib/systemd/system/pd-mapper.service
+sed -i '/ConditionKernelVersion/d' rootdir/lib/systemd/system/pd-mapper.service 2>/dev/null || true
 
 # 桌面环境配置
 if [[ "$SYSTEM_TYPE" != *"server"* ]]; then
