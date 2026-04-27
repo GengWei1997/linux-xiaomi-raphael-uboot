@@ -39,9 +39,9 @@ on:
         default: 'resolute'
         type: string
       kernel_repository:
-        description: '内核包仓库 (默认: GengWei1997/kernel-deb)'
+        description: '内核包仓库 (默认: GengWei1997/linux-xiaomi-raphael-uboot)'
         required: false
-        default: 'GengWei1997/kernel-deb'
+        default: 'GengWei1997/linux-xiaomi-raphael-uboot'
         type: string
       use_docker:
         description: '使用 Docker 加速构建'
