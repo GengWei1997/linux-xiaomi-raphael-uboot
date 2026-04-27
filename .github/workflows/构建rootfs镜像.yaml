@@ -21,7 +21,7 @@ on:
       kernel_version:
         description: '内核版本号 (从 Release 下载对应版本)'
         required: true
-        default: '6.18'
+        default: '7.0'
       desktop_environment:
         description: '桌面环境 (仅适用于Phosh版本，GNOME版本和server版本无需选择)'
         required: false
@@ -86,13 +86,13 @@ jobs:
           
           # 下载通用内核包
           curl -L -o xiaomi-raphael-debs_${{ env.KERNEL_VERSION }}/linux-image-xiaomi-raphael.deb \
-            "https://github.com/${{ github.repository }}/releases/download/kernel-v${{ env.KERNEL_VERSION }}/linux-image-xiaomi-raphael.deb" || echo "下载 linux-image-xiaomi-raphael.deb 失败，可能 Release 不存在"
+            "https://github.com/GengWei1997/linux-xiaomi-raphael-uboot/releases/download/kernel-v${{ env.KERNEL_VERSION }}/linux-image-xiaomi-raphael.deb" || echo "下载 linux-image-xiaomi-raphael.deb 失败，可能 Release 不存在"
           
           curl -L -o xiaomi-raphael-debs_${{ env.KERNEL_VERSION }}/linux-headers-xiaomi-raphael.deb \
-            "https://github.com/${{ github.repository }}/releases/download/kernel-v${{ env.KERNEL_VERSION }}/linux-headers-xiaomi-raphael.deb" || echo "下载 linux-headers-xiaomi-raphael.deb 失败，可能 Release 不存在"
+            "https://github.com/GengWei1997/linux-xiaomi-raphael-uboot/releases/download/kernel-v${{ env.KERNEL_VERSION }}/linux-headers-xiaomi-raphael.deb" || echo "下载 linux-headers-xiaomi-raphael.deb 失败，可能 Release 不存在"
           
           curl -L -o xiaomi-raphael-debs_${{ env.KERNEL_VERSION }}/firmware-xiaomi-raphael.deb \
-            "https://github.com/${{ github.repository }}/releases/download/kernel-v${{ env.KERNEL_VERSION }}/firmware-xiaomi-raphael.deb" || echo "下载 firmware-xiaomi-raphael.deb 失败，可能 Release 不存在"
+            "https://github.com/GengWei1997/linux-xiaomi-raphael-uboot/releases/download/kernel-v${{ env.KERNEL_VERSION }}/firmware-xiaomi-raphael.deb" || echo "下载 firmware-xiaomi-raphael.deb 失败，可能 Release 不存在"
           
           # 下载xiaomi-k20pro-boot.img
           curl -L -o xiaomi-k20pro-boot.img \curl -L -o xiaomi-k20pro-boot.img \
@@ -102,7 +102,7 @@ jobs:
           # 桌面版本需要额外的alsa包
           if [[ "${{ env.SYSTEM_TYPE }}" == *"phosh"* || "${{ env.SYSTEM_TYPE }}" == *"gnome"* ]]; then
             curl -L -o xiaomi-raphael-debs_${{ env.KERNEL_VERSION }}/alsa-xiaomi-raphael.deb \
-              "https://github.com/${{ github.repository }}/releases/download/kernel-v${{ env.KERNEL_VERSION }}/alsa-xiaomi-raphael.deb" || echo "下载 alsa-xiaomi-raphael.deb 失败，可能 Release 不存在"
+              "https://github.com/GengWei1997/linux-xiaomi-raphael-uboot/releases/download/kernel-v${{ env.KERNEL_VERSION }}/alsa-xiaomi-raphael.deb" || echo "下载 alsa-xiaomi-raphael.deb 失败，可能 Release 不存在"
           fi
           
           # 检查是否下载成功
