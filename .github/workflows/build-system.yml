@@ -39,9 +39,9 @@ on:
         default: 'resolute'
         type: string
       kernel_repository:
-        description: '内核包仓库 (默认: GengWei1997/linux-xiaomi-raphael-uboot)'
+        description: '内核包仓库 (默认: GengWei1997/kernel-deb)'
         required: false
-        default: 'GengWei1997/linux-xiaomi-raphael-uboot'
+        default: 'GengWei1997/kernel-deb'
         type: string
       use_docker:
         description: '使用 Docker 加速构建'
@@ -73,60 +73,24 @@ env:
   SUPPRESS_DEPRECATION_WARNINGS: true
 
 jobs:
-  setup:
-    name: 检查依赖
-    runs-on: ubuntu-24.04-arm
-    steps:
-      - name: 检出代码
-        uses: actions/checkout@v5
-
-      - name: 检查参数
-        id: check-params
-        run: |
-          SYSTEM_TYPE="${{ github.event.inputs.system_type || 'ubuntu-server' }}"
-          KERNEL_VERSION="${{ github.event.inputs.kernel_version || '6.18' }}"
-          DESKTOP_ENV="${{ github.event.inputs.desktop_environment || 'phosh-full' }}"
-          DEBIAN_VERSION="${{ github.event.inputs.debian_version || 'trixie' }}"
-          UBUNTU_VERSION="${{ github.event.inputs.ubuntu_version || 'resolute' }}"
-          USE_DOCKER="${{ github.event.inputs.use_docker || 'false' }}"
-          KERNEL_REPO="${{ github.event.inputs.kernel_repository || 'GengWei1997/kernel-deb' }}"
-
-          echo "system_type=$SYSTEM_TYPE" >> $GITHUB_OUTPUT
-          echo "kernel_version=$KERNEL_VERSION" >> $GITHUB_OUTPUT
-          echo "desktop_environment=$DESKTOP_ENV" >> $GITHUB_OUTPUT
-          echo "debian_version=$DEBIAN_VERSION" >> $GITHUB_OUTPUT
-          echo "ubuntu_version=$UBUNTU_VERSION" >> $GITHUB_OUTPUT
-          echo "use_docker=$USE_DOCKER" >> $GITHUB_OUTPUT
-          echo "kernel_repo=$KERNEL_REPO" >> $GITHUB_OUTPUT
-
-    outputs:
-      system_type: ${{ steps.check-params.outputs.system_type }}
-      kernel_version: ${{ steps.check-params.outputs.kernel_version }}
-      desktop_environment: ${{ steps.check-params.outputs.desktop_environment }}
-      debian_version: ${{ steps.check-params.outputs.debian_version }}
-      ubuntu_version: ${{ steps.check-params.outputs.ubuntu_version }}
-      use_docker: ${{ steps.check-params.outputs.use_docker }}
-      kernel_repo: ${{ steps.check-params.outputs.kernel_repo }}
-
   build:
     name: 构建镜像
-    needs: setup
     runs-on: ubuntu-24.04-arm
     env:
-      SYSTEM_TYPE: ${{ needs.setup.outputs.system_type }}
-      KERNEL_VERSION: ${{ needs.setup.outputs.kernel_version }}
-      DESKTOP_ENV: ${{ needs.setup.outputs.desktop_environment }}
-      DEBIAN_VERSION: ${{ needs.setup.outputs.debian_version }}
-      UBUNTU_VERSION: ${{ needs.setup.outputs.ubuntu_version }}
-      USE_DOCKER: ${{ needs.setup.outputs.use_docker }}
-      KERNEL_REPO: ${{ needs.setup.outputs.kernel_repo }}
+      SYSTEM_TYPE: ${{ github.event.inputs.system_type || 'ubuntu-server' }}
+      KERNEL_VERSION: ${{ github.event.inputs.kernel_version || '6.18' }}
+      DESKTOP_ENV: ${{ github.event.inputs.desktop_environment || 'phosh-full' }}
+      DEBIAN_VERSION: ${{ github.event.inputs.debian_version || 'trixie' }}
+      UBUNTU_VERSION: ${{ github.event.inputs.ubuntu_version || 'resolute' }}
+      USE_DOCKER: ${{ github.event.inputs.use_docker || 'false' }}
+      KERNEL_REPO: ${{ github.event.inputs.kernel_repository || 'GengWei1997/kernel-deb' }}
 
     steps:
       - name: 检出代码
         uses: actions/checkout@v5
 
       - name: 安装 debootstrap
-        if: ${{ needs.setup.outputs.use_docker != 'true' }}
+        if: ${{ github.event.inputs.use_docker != 'true' }}
         run: |
           if ! command -v debootstrap &> /dev/null; then
             echo "安装 debootstrap..."
@@ -156,7 +120,7 @@ jobs:
           PID3=$!
 
           curl -sL -o xiaomi-k20pro-boot.img \
-            "https://github.com/${{ env.KERNEL_REPO }}/releases/download/v1.0.0/xiaomi-k20pro-boot.img" &
+            "https://github.com/GengWei1997/kernel-deb/releases/download/v1.0.0/xiaomi-k20pro-boot.img" &
           PID4=$!
 
           # 桌面版本需要额外的alsa包
@@ -211,8 +175,8 @@ jobs:
       - name: 设置 artifact 名称
         id: set-artifact-name
         run: |
-          ARTIFACT_NAME="${{ needs.setup.outputs.system_type }}-rootfs-${{ env.KERNEL_VERSION }}-${{ needs.setup.outputs.debian_version || needs.setup.outputs.ubuntu_version }}"
-          if [ "${{ needs.setup.outputs.use_docker }}" == "true" ]; then
+          ARTIFACT_NAME="${{ env.SYSTEM_TYPE }}-rootfs-${{ env.KERNEL_VERSION }}-${{ env.DEBIAN_VERSION || env.UBUNTU_VERSION }}"
+          if [ "${{ env.USE_DOCKER }}" == "true" ]; then
             ARTIFACT_NAME="${ARTIFACT_NAME}-docker"
           fi
           echo "artifact_name=$ARTIFACT_NAME" >> $GITHUB_OUTPUT
@@ -237,126 +201,80 @@ jobs:
             sha256sums.txt
           retention-days: 30
 
-      - name: 清理临时文件
-        if: always()
+      - name: 创建 Release
+        if: github.event_name == 'workflow_dispatch'
+        id: create-release
         run: |
-          sudo rm -f alsa-xiaomi-raphael.deb 2>/dev/null || true
-          sudo rm -rf rootdir 2>/dev/null || true
-          rm -rf xiaomi-raphael-debs_* 2>/dev/null || true
+          echo "正在创建 Release..."
 
-  release:
-    name: 发布 Release
-    needs: [build, setup]
-    runs-on: ubuntu-24.04-arm
-    if: github.event_name == 'workflow_dispatch'
-    permissions:
-      contents: write
-
-    steps:
-      - name: 设置 artifact 名称
-        id: set-artifact-name
-        run: |
-          ARTIFACT_NAME="${{ needs.setup.outputs.system_type }}-rootfs-${{ needs.setup.outputs.kernel_version }}-${{ needs.setup.outputs.debian_version || needs.setup.outputs.ubuntu_version }}"
-          if [ "${{ needs.setup.outputs.use_docker }}" == "true" ]; then
-            ARTIFACT_NAME="${ARTIFACT_NAME}-docker"
-          fi
-          echo "artifact_name=$ARTIFACT_NAME" >> $GITHUB_OUTPUT
-          echo "Artifact 名称: $ARTIFACT_NAME"
-
-      - name: 下载镜像
-        uses: actions/download-artifact@v5
-        with:
-          name: ${{ steps.set-artifact-name.outputs.artifact_name }}
-          path: .
-
-      - name: 显示SHA256校验和
-        id: sha256
-        run: |
-          echo "SHA256 校验和:"
-          cat sha256sums.txt
+          # 计算 SHA256
           SHA256_ROOTFS=$(awk '{print $1}' sha256sums.txt | head -n1)
           SHA256_BOOT=$(awk '{print $1}' sha256sums.txt | tail -n1)
-          echo "sha256_rootfs=$SHA256_ROOTFS" >> $GITHUB_OUTPUT
-          echo "sha256_boot=$SHA256_BOOT" >> $GITHUB_OUTPUT
 
-      - name: 获取构建信息
-        id: build-info
-        run: |
+          # 获取构建信息
           TIMESTAMP=$(TZ='Asia/Shanghai' date +'%Y-%m-%d %H:%M:%S')
-          echo "timestamp=$TIMESTAMP" >> $GITHUB_OUTPUT
 
-          if [[ "${{ needs.setup.outputs.system_type }}" == *"debian-"* ]]; then
+          if [[ "${{ env.SYSTEM_TYPE }}" == *"debian-"* ]]; then
             OS_NAME="Debian"
-            OS_VERSION="${{ needs.setup.outputs.debian_version }}"
-          elif [[ "${{ needs.setup.outputs.system_type }}" == *"ubuntu-"* ]]; then
-            OS_NAME="Ubuntu"
-            OS_VERSION="${{ needs.setup.outputs.ubuntu_version }}"
+            OS_VERSION="${{ env.DEBIAN_VERSION }}"
           else
-            OS_NAME="Unknown"
-            OS_VERSION="unknown"
+            OS_NAME="Ubuntu"
+            OS_VERSION="${{ env.UBUNTU_VERSION }}"
           fi
-          echo "os_name=$OS_NAME" >> $GITHUB_OUTPUT
-          echo "os_version=$OS_VERSION" >> $GITHUB_OUTPUT
 
-          if [[ "${{ needs.setup.outputs.system_type }}" == *"server"* ]]; then
+          if [[ "${{ env.SYSTEM_TYPE }}" == *"server"* ]]; then
             SYSTEM_CATEGORY="Server"
           else
             SYSTEM_CATEGORY="Desktop"
           fi
-          echo "system_category=$SYSTEM_CATEGORY" >> $GITHUB_OUTPUT
 
-      - name: 生成Release信息
-        id: release-info
-        run: |
-          TAG="${{ needs.setup.outputs.system_type }}-v${{ needs.setup.outputs.kernel_version }}-${{ needs.setup.outputs.debian_version || needs.setup.outputs.ubuntu_version }}"
-          if [[ "${{ needs.setup.outputs.system_type }}" == *"phosh"* ]]; then
-            TAG="${TAG}-${{ needs.setup.outputs.desktop_environment }}"
+          # 生成 Tag
+          TAG="${{ env.SYSTEM_TYPE }}-v${{ env.KERNEL_VERSION }}-$OS_VERSION"
+          if [[ "${{ env.SYSTEM_TYPE }}" == *"phosh"* ]]; then
+            TAG="${TAG}-${{ env.DESKTOP_ENV }}"
           fi
-          if [[ "${{ needs.setup.outputs.use_docker }}" == "true" ]]; then
+          if [[ "${{ env.USE_DOCKER }}" == "true" ]]; then
             TAG="${TAG}-docker"
           fi
-          echo "tag_name=$TAG" >> $GITHUB_OUTPUT
 
-          RELEASE_NAME="${{ steps.build-info.outputs.os_name }} ${{ steps.build-info.outputs.system_category }} 镜像 v${{ needs.setup.outputs.kernel_version }} (${{ steps.build-info.outputs.os_version }})"
-          if [[ "${{ needs.setup.outputs.system_type }}" == *"phosh"* ]]; then
-            RELEASE_NAME="${RELEASE_NAME} - ${{ needs.setup.outputs.desktop_environment }}"
-          elif [[ "${{ needs.setup.outputs.system_type }}" == *"gnome"* ]]; then
+          # 生成 Release 名称
+          RELEASE_NAME="$OS_NAME $SYSTEM_CATEGORY 镜像 v${{ env.KERNEL_VERSION }} ($OS_VERSION)"
+          if [[ "${{ env.SYSTEM_TYPE }}" == *"phosh"* ]]; then
+            RELEASE_NAME="${RELEASE_NAME} - ${{ env.DESKTOP_ENV }}"
+          elif [[ "${{ env.SYSTEM_TYPE }}" == *"gnome"* ]]; then
             RELEASE_NAME="${RELEASE_NAME} - GNOME"
           fi
-          if [[ "${{ needs.setup.outputs.use_docker }}" == "true" ]]; then
+          if [[ "${{ env.USE_DOCKER }}" == "true" ]]; then
             RELEASE_NAME="${RELEASE_NAME} [Docker 加速]"
           fi
-          echo "release_name=$RELEASE_NAME" >> $GITHUB_OUTPUT
 
-      - name: 生成Release描述
-        id: release-desc
-        run: |
-          DESCRIPTION="小米 Raphael 设备 ${{ steps.build-info.outputs.os_name }} ${{ steps.build-info.outputs.system_category }} 镜像\n"
-          DESCRIPTION="${DESCRIPTION}- 系统版本: ${{ steps.build-info.outputs.os_name }} ${{ steps.build-info.outputs.os_version }}\n"
-          DESCRIPTION="${DESCRIPTION}- 内核版本: ${{ needs.setup.outputs.kernel_version }}\n"
+          # 生成描述
+          DESCRIPTION="小米 Raphael 设备 $OS_NAME $SYSTEM_CATEGORY 镜像\n"
+          DESCRIPTION="${DESCRIPTION}- 系统版本: $OS_NAME $OS_VERSION\n"
+          DESCRIPTION="${DESCRIPTION}- 内核版本: ${{ env.KERNEL_VERSION }}\n"
 
-          if [[ "${{ needs.setup.outputs.system_type }}" == *"phosh"* ]]; then
-            DESCRIPTION="${DESCRIPTION}- 桌面环境: ${{ needs.setup.outputs.desktop_environment }}\n"
-          elif [[ "${{ needs.setup.outputs.system_type }}" == *"gnome"* ]]; then
+          if [[ "${{ env.SYSTEM_TYPE }}" == *"phosh"* ]]; then
+            DESCRIPTION="${DESCRIPTION}- 桌面环境: ${{ env.DESKTOP_ENV }}\n"
+          elif [[ "${{ env.SYSTEM_TYPE }}" == *"gnome"* ]]; then
             DESCRIPTION="${DESCRIPTION}- 桌面环境: GNOME\n"
           fi
 
-          if [[ "${{ needs.setup.outputs.use_docker }}" == "true" ]]; then
+          if [[ "${{ env.USE_DOCKER }}" == "true" ]]; then
             DESCRIPTION="${DESCRIPTION}- 构建模式: Docker 加速模式 ⚡\n"
           else
             DESCRIPTION="${DESCRIPTION}- 构建模式: 标准模式 (debootstrap) 🛠️\n"
           fi
 
-          DESCRIPTION="${DESCRIPTION}- 构建时间: ${{ steps.build-info.outputs.timestamp }}\n"
+          DESCRIPTION="${DESCRIPTION}- 构建时间: $TIMESTAMP\n"
           DESCRIPTION="${DESCRIPTION}- 构建 ID: ${{ github.run_id }}-${{ github.run_number }}\n\n"
 
           DESCRIPTION="${DESCRIPTION}SHA256 校验和：\n"
           DESCRIPTION="${DESCRIPTION}\`\`\`\n"
-          DESCRIPTION="${DESCRIPTION}rootfs.img: ${{ steps.sha256.outputs.sha256_rootfs }}\n"
-          DESCRIPTION="${DESCRIPTION}xiaomi-k20pro-boot.img: ${{ steps.sha256.outputs.sha256_boot }}\n"
+          DESCRIPTION="${DESCRIPTION}rootfs.img: $SHA256_ROOTFS\n"
+          DESCRIPTION="${DESCRIPTION}xiaomi-k20pro-boot.img: $SHA256_BOOT\n"
           DESCRIPTION="${DESCRIPTION}\`\`\`\n\n"
 
-          if [[ "${{ needs.setup.outputs.system_type }}" == *"server"* ]]; then
+          if [[ "${{ env.SYSTEM_TYPE }}" == *"server"* ]]; then
             DESCRIPTION="${DESCRIPTION}说明：\n"
             DESCRIPTION="${DESCRIPTION}- 这是一个无图形界面的服务器版本\n"
             DESCRIPTION="${DESCRIPTION}- 包含基础网络管理工具\n"
@@ -366,8 +284,8 @@ jobs:
           else
             DESCRIPTION="${DESCRIPTION}说明：\n"
             DESCRIPTION="${DESCRIPTION}- 这是一个带有图形界面的桌面版本\n"
-            if [[ "${{ needs.setup.outputs.system_type }}" == *"phosh"* ]]; then
-              DESCRIPTION="${DESCRIPTION}- 包含 ${{ needs.setup.outputs.desktop_environment }} 桌面环境\n"
+            if [[ "${{ env.SYSTEM_TYPE }}" == *"phosh"* ]]; then
+              DESCRIPTION="${DESCRIPTION}- 包含 ${{ env.DESKTOP_ENV }} 桌面环境\n"
             else
               DESCRIPTION="${DESCRIPTION}- 包含 GNOME 桌面环境\n"
             fi
@@ -376,19 +294,27 @@ jobs:
             DESCRIPTION="${DESCRIPTION}- 包含必要的设备驱动和固件\n"
           fi
 
-          echo "description<<EOF" >> $GITHUB_OUTPUT
-          echo -e "$DESCRIPTION" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "name=$RELEASE_NAME" >> $GITHUB_OUTPUT
+          echo "description=$DESCRIPTION" >> $GITHUB_OUTPUT
 
-      - name: 创建 Release
+      - name: 发布 Release
+        if: github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.release-info.outputs.tag_name }}
-          name: ${{ steps.release-info.outputs.release_name }}
-          body: ${{ steps.release-desc.outputs.description }}
+          tag_name: ${{ steps.create-release.outputs.tag }}
+          name: ${{ steps.create-release.outputs.name }}
+          body: ${{ steps.create-release.outputs.description }}
           draft: false
           prerelease: false
           files: |
             rootfs.7z
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 清理临时文件
+        if: always()
+        run: |
+          sudo rm -f alsa-xiaomi-raphael.deb 2>/dev/null || true
+          sudo rm -rf rootdir 2>/dev/null || true
+          rm -rf xiaomi-raphael-debs_* 2>/dev/null || true
