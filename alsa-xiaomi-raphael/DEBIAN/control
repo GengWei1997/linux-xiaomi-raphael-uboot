@@ -1,6 +1,0 @@
-Package: alsa-xiaomi-raphael
-Version: 1.0
-Architecture: arm64
-Maintainer: GengWei1997 <anonymous@localhost>
-Depends: alsa-ucm-conf
-Description: Alsa UCM configurations for Xiaomi K20 Pro

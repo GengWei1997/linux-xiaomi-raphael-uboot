@@ -1,1 +1,0 @@
-{"sns_multishake":{"owner":"sns_multishake","min_shake_period":{"type":"flt","ver":"0","data":"0.220000"},"max_shake_period":{"type":"flt","ver":"0","data":"0.700000"},"sleep_time":{"type":"flt","ver":"0","data":"0.120000"},"shake_thresh":{"type":"flt","ver":"0","data":"1.500000"},"sample_rate":{"type":"flt","ver":"0","data":"100.000000"}}}

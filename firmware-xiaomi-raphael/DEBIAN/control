@@ -1,7 +1,0 @@
-Package: firmware-xiaomi-raphael
-Version: 1.0
-Architecture: arm64
-Maintainer: GengWei1997 <anonymous@localhost>
-Conflicts: linux-firmware
-Replaces: linux-firmware
-Description: Firmware blobs for Xiaomi K20 Pro
