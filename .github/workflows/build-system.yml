@@ -43,14 +43,6 @@ on:
         required: false
         default: 'GengWei1997/linux-xiaomi-raphael-uboot'
         type: string
-      use_docker:
-        description: '使用 Docker 加速构建'
-        required: false
-        default: 'false'
-        type: choice
-        options:
-          - 'true'
-          - 'false'
   push:
     branches:
       - main
@@ -82,22 +74,20 @@ jobs:
       DESKTOP_ENV: ${{ github.event.inputs.desktop_environment || 'phosh-full' }}
       DEBIAN_VERSION: ${{ github.event.inputs.debian_version || 'trixie' }}
       UBUNTU_VERSION: ${{ github.event.inputs.ubuntu_version || 'resolute' }}
-      USE_DOCKER: ${{ github.event.inputs.use_docker || 'false' }}
       KERNEL_REPO: ${{ github.event.inputs.kernel_repository || 'GengWei1997/kernel-deb' }}
 
     steps:
       - name: 检出代码
         uses: actions/checkout@v5
 
-      - name: 安装 debootstrap
-        if: ${{ github.event.inputs.use_docker != 'true' }}
+      - name: 安装 mmdebstrap
         run: |
-          if ! command -v debootstrap &> /dev/null; then
-            echo "安装 debootstrap..."
+          if ! command -v mmdebstrap &> /dev/null; then
+            echo "安装 mmdebstrap..."
             sudo apt update
-            sudo apt install -y debootstrap
+            sudo apt install -y mmdebstrap
           else
-            echo "debootstrap 已安装，跳过"
+            echo "mmdebstrap 已安装，跳过"
           fi
 
       - name: 下载内核包和boot.img (并行)
@@ -160,15 +150,15 @@ jobs:
 
           if [[ "${{ env.SYSTEM_TYPE }}" == *"phosh"* ]]; then
             if [[ "${{ env.SYSTEM_TYPE }}" == *"debian-"* ]]; then
-              sudo DEBIAN_VERSION="${{ env.DEBIAN_VERSION }}" USE_DOCKER="${{ env.USE_DOCKER }}" ./build.sh "${{ env.SYSTEM_TYPE }}" "${{ env.KERNEL_VERSION }}" "${{ env.DESKTOP_ENV }}" "${{ env.DEBIAN_VERSION }}" "${{ env.USE_DOCKER }}"
+              sudo DEBIAN_VERSION="${{ env.DEBIAN_VERSION }}" ./build.sh "${{ env.SYSTEM_TYPE }}" "${{ env.KERNEL_VERSION }}" "${{ env.DESKTOP_ENV }}" "${{ env.DEBIAN_VERSION }}"
             else
-              sudo UBUNTU_VERSION="${{ env.UBUNTU_VERSION }}" USE_DOCKER="${{ env.USE_DOCKER }}" ./build.sh "${{ env.SYSTEM_TYPE }}" "${{ env.KERNEL_VERSION }}" "${{ env.DESKTOP_ENV }}" "${{ env.UBUNTU_VERSION }}" "${{ env.USE_DOCKER }}"
+              sudo UBUNTU_VERSION="${{ env.UBUNTU_VERSION }}" ./build.sh "${{ env.SYSTEM_TYPE }}" "${{ env.KERNEL_VERSION }}" "${{ env.DESKTOP_ENV }}" "${{ env.UBUNTU_VERSION }}"
             fi
           else
             if [[ "${{ env.SYSTEM_TYPE }}" == *"debian-"* ]]; then
-              sudo DEBIAN_VERSION="${{ env.DEBIAN_VERSION }}" USE_DOCKER="${{ env.USE_DOCKER }}" ./build.sh "${{ env.SYSTEM_TYPE }}" "${{ env.KERNEL_VERSION }}" "" "${{ env.DEBIAN_VERSION }}" "${{ env.USE_DOCKER }}"
+              sudo DEBIAN_VERSION="${{ env.DEBIAN_VERSION }}" ./build.sh "${{ env.SYSTEM_TYPE }}" "${{ env.KERNEL_VERSION }}" "" "${{ env.DEBIAN_VERSION }}"
             else
-              sudo UBUNTU_VERSION="${{ env.UBUNTU_VERSION }}" USE_DOCKER="${{ env.USE_DOCKER }}" ./build.sh "${{ env.SYSTEM_TYPE }}" "${{ env.KERNEL_VERSION }}" "" "${{ env.UBUNTU_VERSION }}" "${{ env.USE_DOCKER }}"
+              sudo UBUNTU_VERSION="${{ env.UBUNTU_VERSION }}" ./build.sh "${{ env.SYSTEM_TYPE }}" "${{ env.KERNEL_VERSION }}" "" "${{ env.UBUNTU_VERSION }}"
             fi
           fi
 
@@ -176,9 +166,6 @@ jobs:
         id: set-artifact-name
         run: |
           ARTIFACT_NAME="${{ env.SYSTEM_TYPE }}-rootfs-${{ env.KERNEL_VERSION }}-${{ env.DEBIAN_VERSION || env.UBUNTU_VERSION }}"
-          if [ "${{ env.USE_DOCKER }}" == "true" ]; then
-            ARTIFACT_NAME="${ARTIFACT_NAME}-docker"
-          fi
           echo "artifact_name=$ARTIFACT_NAME" >> $GITHUB_OUTPUT
           echo "Artifact 名称: $ARTIFACT_NAME"
 
@@ -233,9 +220,6 @@ jobs:
           if [[ "${{ env.SYSTEM_TYPE }}" == *"phosh"* ]]; then
             TAG="${TAG}-${{ env.DESKTOP_ENV }}"
           fi
-          if [[ "${{ env.USE_DOCKER }}" == "true" ]]; then
-            TAG="${TAG}-docker"
-          fi
 
           # 生成 Release 名称
           RELEASE_NAME="$OS_NAME $SYSTEM_CATEGORY 镜像 v${{ env.KERNEL_VERSION }} ($OS_VERSION)"
@@ -243,9 +227,6 @@ jobs:
             RELEASE_NAME="${RELEASE_NAME} - ${{ env.DESKTOP_ENV }}"
           elif [[ "${{ env.SYSTEM_TYPE }}" == *"gnome"* ]]; then
             RELEASE_NAME="${RELEASE_NAME} - GNOME"
-          fi
-          if [[ "${{ env.USE_DOCKER }}" == "true" ]]; then
-            RELEASE_NAME="${RELEASE_NAME} [Docker 加速]"
           fi
 
           # 生成描述
@@ -259,12 +240,7 @@ jobs:
             DESCRIPTION="${DESCRIPTION}- 桌面环境: GNOME\n"
           fi
 
-          if [[ "${{ env.USE_DOCKER }}" == "true" ]]; then
-            DESCRIPTION="${DESCRIPTION}- 构建模式: Docker 加速模式 ⚡\n"
-          else
-            DESCRIPTION="${DESCRIPTION}- 构建模式: 标准模式 (debootstrap) 🛠️\n"
-          fi
-
+          DESCRIPTION="${DESCRIPTION}- 构建模式: mmdebstrap 🛠️\n"
           DESCRIPTION="${DESCRIPTION}- 构建时间: $TIMESTAMP\n"
           DESCRIPTION="${DESCRIPTION}- 构建 ID: ${{ github.run_id }}-${{ github.run_number }}\n\n"
 

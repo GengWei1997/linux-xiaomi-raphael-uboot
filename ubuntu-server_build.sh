@@ -17,20 +17,17 @@ mkfs.ext4 rootfs.img
 mkdir rootdir
 mount -o loop rootfs.img rootdir
 
-# debootstrap生成镜像
-docker pull ubuntu:resolute
+# 设置变量
+UBUNTU_VERSION="resolute"
+BASE_URL="https://cdimage.ubuntu.com/ubuntu-base/releases/resolute/release/ubuntu-base-26.04-base-arm64.tar.gz"
 
-echo "  - 运行临时容器 📦"
-docker run --name tmp_rootfs_builder ubuntu:resolute /bin/true
+# 2. 下载并解压 Ubuntu Base (替换 debootstrap)
+echo "正在下载 Ubuntu Base 26.04..."
+wget -O ubuntu-base.tar.gz $BASE_URL
+echo "正在解压到 rootfs..."
+tar -xpf ubuntu-base.tar.gz -C rootdir
+rm ubuntu-base.tar.gz
 
-echo "  - 导出 rootfs 镜像 📤"
-docker export tmp_rootfs_builder | tar -x -C rootdir/
-
-echo "  - 清理临时容器 🧹"
-docker rm tmp_rootfs_builder
-
-echo "  - 创建 boot 目录结构 📁"
-mkdir -p rootdir/boot
 # 挂载boot
 mount -o loop xiaomi-k20pro-boot.img rootdir/boot
 
