@@ -59,7 +59,7 @@ if [ -n "$DESKTOP_PACKAGES" ]; then
 fi
 
 # 执行 apt install
-chroot rootdir apt -q install -y $ALL_PACKAGES
+chroot rootdir apt -q install -y  --ignore-missing $ALL_PACKAGES
 
 # Debian构建时修复可能的dpkg错误（shim-signed:arm64冲突）
 if [[ "$SYSTEM_TYPE" == *"debian-"* ]]; then

@@ -84,8 +84,8 @@ jobs:
         run: |
           if ! command -v mmdebstrap &> /dev/null; then
             echo "安装 mmdebstrap..."
-            sudo apt update
-            sudo apt install -y mmdebstrap
+            sudo apt update -q
+            sudo apt install -q -y mmdebstrap
           else
             echo "mmdebstrap 已安装，跳过"
           fi

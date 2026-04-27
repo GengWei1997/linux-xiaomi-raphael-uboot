@@ -18,9 +18,7 @@ else
     echo "错误: 未识别的系统类型: $SYSTEM_TYPE"
     exit 1
 fi
-ls rootdir/
-ls rootdir/boot/
-ls rootdir/etc/
+
 if [ -f "${BOOT_IMG}" ]; then
     echo "[02] 挂载 boot 分区 (${BOOT_IMG}) 📁"
     if mount -o loop ${BOOT_IMG} rootdir/boot 2>&1; then
