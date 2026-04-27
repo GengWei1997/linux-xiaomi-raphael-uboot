@@ -61,6 +61,15 @@ fi
 # 执行 apt install
 chroot rootdir apt -q install -y $ALL_PACKAGES
 
+# Debian构建时修复可能的dpkg错误（shim-signed:arm64冲突）
+if [[ "$SYSTEM_TYPE" == *"debian-"* ]]; then
+    echo "  - 修复Debian系统dpkg错误"
+    chroot rootdir dpkg --remove --force-remove-reinstreq shim-signed 2>/dev/null || true
+    chroot rootdir dpkg --purge shim-signed 2>/dev/null || true
+    chroot rootdir dpkg --configure -a 2>/dev/null || true
+    chroot rootdir apt -f install -y 2>/dev/null || true
+fi
+
 # 设备特定配置
 sed -i '/ConditionKernelVersion/d' rootdir/lib/systemd/system/pd-mapper.service
 
