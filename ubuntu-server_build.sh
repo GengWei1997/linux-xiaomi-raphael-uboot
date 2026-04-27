@@ -18,8 +18,19 @@ mkdir rootdir
 mount -o loop rootfs.img rootdir
 
 # debootstrap生成镜像
-debootstrap --arch=arm64 $UBUNTU_VERSION rootdir https://ports.ubuntu.com/ubuntu-ports/
+docker pull ubuntu:resolute
 
+echo "  - 运行临时容器 📦"
+docker run --name tmp_rootfs_builder ubuntu:resolute /bin/true
+
+echo "  - 导出 rootfs 镜像 📤"
+docker export tmp_rootfs_builder | tar -x -C rootdir/
+
+echo "  - 清理临时容器 🧹"
+docker rm tmp_rootfs_builder
+
+echo "  - 创建 boot 目录结构 📁"
+mkdir -p rootdir/boot
 # 挂载boot
 mount -o loop xiaomi-k20pro-boot.img rootdir/boot
 
