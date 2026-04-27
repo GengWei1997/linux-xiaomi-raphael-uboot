@@ -22,6 +22,14 @@ on:
           - '6.18'
           - '7.0'
         default: '7.0'
+      bootstrap_tool:
+        description: '构建工具'
+        required: true
+        type: choice
+        options:
+          - mmdebstrap
+          - debootstrap
+        default: 'mmdebstrap'
       desktop_environment:
         description: '桌面环境 (仅适用于Phosh版本)'
         required: false
@@ -80,6 +88,7 @@ jobs:
     env:
       SYSTEM_TYPE: ${{ github.event.inputs.system_type || 'ubuntu-server' }}
       KERNEL_VERSION: ${{ github.event.inputs.kernel_version || '6.18' }}
+      BOOTSTRAP_TOOL: ${{ github.event.inputs.bootstrap_tool || 'mmdebstrap' }}
       DESKTOP_ENV: ${{ github.event.inputs.desktop_environment || 'phosh-full' }}
       DEBIAN_VERSION: ${{ github.event.inputs.debian_version || 'trixie' }}
       UBUNTU_VERSION: ${{ github.event.inputs.ubuntu_version || 'resolute' }}
@@ -89,14 +98,24 @@ jobs:
       - name: 检出代码
         uses: actions/checkout@v5
 
-      - name: 安装 mmdebstrap
+      - name: 安装构建工具
         run: |
-          if ! command -v mmdebstrap &> /dev/null; then
-            echo "安装 mmdebstrap..."
-            sudo apt update
-            sudo apt install -y mmdebstrap
+          if [ "${{ env.BOOTSTRAP_TOOL }}" = "mmdebstrap" ]; then
+            if ! command -v mmdebstrap &> /dev/null; then
+              echo "安装 mmdebstrap..."
+              sudo apt update
+              sudo apt install -y mmdebstrap
+            else
+              echo "mmdebstrap 已安装，跳过"
+            fi
           else
-            echo "mmdebstrap 已安装，跳过"
+            if ! command -v debootstrap &> /dev/null; then
+              echo "安装 debootstrap..."
+              sudo apt update
+              sudo apt install -y debootstrap
+            else
+              echo "debootstrap 已安装，跳过"
+            fi
           fi
 
       - name: 下载内核包和boot.img (并行)
@@ -159,15 +178,15 @@ jobs:
 
           if [[ "${{ env.SYSTEM_TYPE }}" == *"phosh"* ]]; then
             if [[ "${{ env.SYSTEM_TYPE }}" == *"debian-"* ]]; then
-              sudo DEBIAN_VERSION="${{ env.DEBIAN_VERSION }}" ./build.sh "${{ env.SYSTEM_TYPE }}" "${{ env.KERNEL_VERSION }}" "${{ env.DESKTOP_ENV }}" "${{ env.DEBIAN_VERSION }}"
+              sudo BOOTSTRAP_TOOL="${{ env.BOOTSTRAP_TOOL }}" DEBIAN_VERSION="${{ env.DEBIAN_VERSION }}" ./build.sh "${{ env.SYSTEM_TYPE }}" "${{ env.KERNEL_VERSION }}" "${{ env.DESKTOP_ENV }}" "${{ env.DEBIAN_VERSION }}"
             else
-              sudo UBUNTU_VERSION="${{ env.UBUNTU_VERSION }}" ./build.sh "${{ env.SYSTEM_TYPE }}" "${{ env.KERNEL_VERSION }}" "${{ env.DESKTOP_ENV }}" "${{ env.UBUNTU_VERSION }}"
+              sudo BOOTSTRAP_TOOL="${{ env.BOOTSTRAP_TOOL }}" UBUNTU_VERSION="${{ env.UBUNTU_VERSION }}" ./build.sh "${{ env.SYSTEM_TYPE }}" "${{ env.KERNEL_VERSION }}" "${{ env.DESKTOP_ENV }}" "${{ env.UBUNTU_VERSION }}"
             fi
           else
             if [[ "${{ env.SYSTEM_TYPE }}" == *"debian-"* ]]; then
-              sudo DEBIAN_VERSION="${{ env.DEBIAN_VERSION }}" ./build.sh "${{ env.SYSTEM_TYPE }}" "${{ env.KERNEL_VERSION }}" "" "${{ env.DEBIAN_VERSION }}"
+              sudo BOOTSTRAP_TOOL="${{ env.BOOTSTRAP_TOOL }}" DEBIAN_VERSION="${{ env.DEBIAN_VERSION }}" ./build.sh "${{ env.SYSTEM_TYPE }}" "${{ env.KERNEL_VERSION }}" "" "${{ env.DEBIAN_VERSION }}"
             else
-              sudo UBUNTU_VERSION="${{ env.UBUNTU_VERSION }}" ./build.sh "${{ env.SYSTEM_TYPE }}" "${{ env.KERNEL_VERSION }}" "" "${{ env.UBUNTU_VERSION }}"
+              sudo BOOTSTRAP_TOOL="${{ env.BOOTSTRAP_TOOL }}" UBUNTU_VERSION="${{ env.UBUNTU_VERSION }}" ./build.sh "${{ env.SYSTEM_TYPE }}" "${{ env.KERNEL_VERSION }}" "" "${{ env.UBUNTU_VERSION }}"
             fi
           fi
 
@@ -249,7 +268,7 @@ jobs:
             DESCRIPTION="${DESCRIPTION}- 桌面环境: GNOME\n"
           fi
 
-          DESCRIPTION="${DESCRIPTION}- 构建模式: mmdebstrap 🛠️\n"
+          DESCRIPTION="${DESCRIPTION}- 构建工具: ${{ env.BOOTSTRAP_TOOL }}\n"
           DESCRIPTION="${DESCRIPTION}- 构建时间: $TIMESTAMP\n"
           DESCRIPTION="${DESCRIPTION}- 构建 ID: ${{ github.run_id }}-${{ github.run_number }}\n\n"
 
