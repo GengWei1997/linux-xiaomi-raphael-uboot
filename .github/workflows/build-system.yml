@@ -109,7 +109,7 @@ jobs:
             if ! command -v mmdebstrap &> /dev/null; then
               echo "[$(date +'%Y-%m-%d %H:%M:%S')]   └─ 安装 mmdebstrap 和依赖..."
               sudo apt update
-              sudo apt install -y mmdebstrap debian-archive-keyring ubuntu-archive-keyring
+              sudo apt install -y mmdebstrap debian-archive-keyring
               echo "[$(date +'%Y-%m-%d %H:%M:%S')]   └─ mmdebstrap 安装完成 ✅"
             else
               echo "[$(date +'%Y-%m-%d %H:%M:%S')]   └─ mmdebstrap 已安装，跳过"
