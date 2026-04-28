@@ -279,7 +279,7 @@ jobs:
           fi
           DESCRIPTION="${DESCRIPTION}| 构建工具 | ${{ env.BOOTSTRAP_TOOL }} |\n"
           DESCRIPTION="${DESCRIPTION}| 构建时间 | $TIMESTAMP |\n"
-          DESCRIPTION="${DESCRIPTION}| 构建 ID | `${{ github.run_id }}-${{ github.run_number }}` |\n\n"
+          DESCRIPTION="${DESCRIPTION}| 构建 ID | \`${{ github.run_id }}-${{ github.run_number }}\` |\n\n"
 
           DESCRIPTION="${DESCRIPTION}### 🔒 SHA256 校验和\n\n"
           DESCRIPTION="${DESCRIPTION}下载后请验证文件完整性：\n\n"

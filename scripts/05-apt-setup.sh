@@ -25,7 +25,7 @@ deb http://security.debian.org/debian-security $DEBIAN_VERSION-security main con
 EOF
 fi
 
-echo "[$(date +'%Y-%m-%d %H:%M:%S')] [05]   └─ 执行 apt update..."
-chroot rootdir apt -q update
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] [05]   └─ 执行 apt-get update..."
+chroot rootdir apt-get -q update
 
 echo "[$(date +'%Y-%m-%d %H:%M:%S')] [05] ✅ apt 配置完成"

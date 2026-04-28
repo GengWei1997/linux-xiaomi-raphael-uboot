@@ -16,8 +16,8 @@ echo "[$(date +'%Y-%m-%d %H:%M:%S')] [06] 📦 安装软件包"
 export DEBIAN_FRONTEND=noninteractive
 
 echo "[$(date +'%Y-%m-%d %H:%M:%S')] [06]   └─ 更新系统包..."
-chroot rootdir apt update
-chroot rootdir apt upgrade -y
+chroot rootdir apt-get update
+chroot rootdir apt-get upgrade -y
 
 BASE_PACKAGES="bash-completion sudo apt-utils ssh openssh-server nano network-manager initramfs-tools chrony curl wget locales tzdata iproute2"
 
@@ -60,14 +60,14 @@ if [ -n "$DESKTOP_PACKAGES" ]; then
 fi
 
 echo "[$(date +'%Y-%m-%d %H:%M:%S')] [06]   └─ 开始安装（这可能需要几分钟...）"
-chroot rootdir apt install -y --ignore-missing $ALL_PACKAGES || true
+chroot rootdir apt-get install -y --ignore-missing $ALL_PACKAGES || true
 
 if [[ "$SYSTEM_TYPE" == *"debian-"* ]]; then
     echo "[$(date +'%Y-%m-%d %H:%M:%S')] [06]   └─ 修复 Debian dpkg 错误"
     chroot rootdir dpkg --remove --force-remove-reinstreq shim-signed 2>/dev/null || true
     chroot rootdir dpkg --purge shim-signed 2>/dev/null || true
     chroot rootdir dpkg --configure -a 2>/dev/null || true
-    chroot rootdir apt -f install -y 2>/dev/null || true
+    chroot rootdir apt-get -f install -y 2>/dev/null || true
 fi
 
 sed -i '/ConditionKernelVersion/d' rootdir/lib/systemd/system/pd-mapper.service 2>/dev/null || true

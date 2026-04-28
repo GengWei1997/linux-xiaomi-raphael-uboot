@@ -11,8 +11,8 @@ echo "[$(date +'%Y-%m-%d %H:%M:%S')] [13] 🧹 清理临时文件"
 
 export DEBIAN_FRONTEND=noninteractive
 
-echo "[$(date +'%Y-%m-%d %H:%M:%S')] [13]   └─ 清理 apt 缓存"
-chroot rootdir apt -q clean
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] [13]   └─ 清理 apt-get 缓存"
+chroot rootdir apt-get -q clean
 
 echo "[$(date +'%Y-%m-%d %H:%M:%S')] [13]   └─ 重命名内核文件"
 mv rootdir/boot/initrd.img-* rootdir/boot/initramfs 2>/dev/null || true
