@@ -23,13 +23,13 @@ on:
           - '7.0'
         default: '7.0'
       bootstrap_tool:
-        description: '构建工具(debian不推荐使用mmdebstrap)'
+        description: '构建工具 (mmdebstrap更快，推荐使用)'
         required: true
         type: choice
         options:
           - mmdebstrap
           - debootstrap
-        default: 'debootstrap'
+        default: 'mmdebstrap'
       desktop_environment:
         description: '桌面环境 (仅适用于Phosh版本)'
         required: false
@@ -95,7 +95,7 @@ jobs:
       DESKTOP_ENV: ${{ github.event.inputs.desktop_environment || 'phosh-full' }}
       DEBIAN_VERSION: ${{ github.event.inputs.debian_version || 'trixie' }}
       UBUNTU_VERSION: ${{ github.event.inputs.ubuntu_version || 'resolute' }}
-      KERNEL_REPO: ${{ github.event.inputs.kernel_repository || 'GengWei1997/kernel-deb' }}
+      KERNEL_REPO: ${{ github.event.inputs.kernel_repository || 'GengWei1997/linux-xiaomi-raphael-uboot' }}
 
     steps:
       - name: 检出代码
@@ -261,45 +261,64 @@ jobs:
           fi
 
           # 生成描述
-          DESCRIPTION="小米 Raphael 设备 $OS_NAME $SYSTEM_CATEGORY 镜像\n"
-          DESCRIPTION="${DESCRIPTION}- 系统版本: $OS_NAME $OS_VERSION\n"
-          DESCRIPTION="${DESCRIPTION}- 内核版本: ${{ env.KERNEL_VERSION }}\n"
-
+          DESCRIPTION="## 小米 Raphael (K20 Pro) $OS_NAME $SYSTEM_CATEGORY 镜像\n\n"
+          DESCRIPTION="${DESCRIPTION}> 适用于小米 Raphael 设备的 $OS_NAME $SYSTEM_CATEGORY 系统镜像\n\n"
+          DESCRIPTION="${DESCRIPTION}### 📋 镜像信息\n\n"
+          DESCRIPTION="${DESCRIPTION}| 属性 | 值 |\n"
+          DESCRIPTION="${DESCRIPTION}|------|----|\n"
+          DESCRIPTION="${DESCRIPTION}| 系统版本 | $OS_NAME $OS_VERSION |\n"
+          DESCRIPTION="${DESCRIPTION}| 内核版本 | Linux ${{ env.KERNEL_VERSION }} |\n"
           if [[ "${{ env.SYSTEM_TYPE }}" == *"phosh"* ]]; then
-            DESCRIPTION="${DESCRIPTION}- 桌面环境: ${{ env.DESKTOP_ENV }}\n"
+            DESCRIPTION="${DESCRIPTION}| 桌面环境 | ${{ env.DESKTOP_ENV }} |\n"
           elif [[ "${{ env.SYSTEM_TYPE }}" == *"gnome"* ]]; then
-            DESCRIPTION="${DESCRIPTION}- 桌面环境: GNOME\n"
+            DESCRIPTION="${DESCRIPTION}| 桌面环境 | GNOME |\n"
           fi
+          DESCRIPTION="${DESCRIPTION}| 构建工具 | ${{ env.BOOTSTRAP_TOOL }} |\n"
+          DESCRIPTION="${DESCRIPTION}| 构建时间 | $TIMESTAMP |\n"
+          DESCRIPTION="${DESCRIPTION}| 构建 ID | `${{ github.run_id }}-${{ github.run_number }}` |\n\n"
 
-          DESCRIPTION="${DESCRIPTION}- 构建工具: ${{ env.BOOTSTRAP_TOOL }}\n"
-          DESCRIPTION="${DESCRIPTION}- 构建时间: $TIMESTAMP\n"
-          DESCRIPTION="${DESCRIPTION}- 构建 ID: ${{ github.run_id }}-${{ github.run_number }}\n\n"
-
-          DESCRIPTION="${DESCRIPTION}SHA256 校验和：\n"
+          DESCRIPTION="${DESCRIPTION}### 🔒 SHA256 校验和\n\n"
+          DESCRIPTION="${DESCRIPTION}下载后请验证文件完整性：\n\n"
           DESCRIPTION="${DESCRIPTION}\`\`\`\n"
-          DESCRIPTION="${DESCRIPTION}rootfs.img: $SHA256_ROOTFS\n"
+          DESCRIPTION="${DESCRIPTION}rootfs.img:     $SHA256_ROOTFS\n"
           DESCRIPTION="${DESCRIPTION}xiaomi-k20pro-boot.img: $SHA256_BOOT\n"
           DESCRIPTION="${DESCRIPTION}\`\`\`\n\n"
 
-          if [[ "${{ env.SYSTEM_TYPE }}" == *"server"* ]]; then
-            DESCRIPTION="${DESCRIPTION}说明：\n"
-            DESCRIPTION="${DESCRIPTION}- 这是一个无图形界面的服务器版本\n"
-            DESCRIPTION="${DESCRIPTION}- 包含基础网络管理工具\n"
-            DESCRIPTION="${DESCRIPTION}- 已安装 SSH 服务器\n"
-            DESCRIPTION="${DESCRIPTION}- 已安装中文语言支持\n"
-            DESCRIPTION="${DESCRIPTION}- 包含必要的设备驱动和固件\n"
-          else
-            DESCRIPTION="${DESCRIPTION}说明：\n"
-            DESCRIPTION="${DESCRIPTION}- 这是一个带有图形界面的桌面版本\n"
+          DESCRIPTION="${DESCRIPTION}### 📦 包含组件\n\n"
+          DESCRIPTION="${DESCRIPTION}- SSH 服务器（已启用密码登录）\n"
+          DESCRIPTION="${DESCRIPTION}- 中文语言支持\n"
+          DESCRIPTION="${DESCRIPTION}- NetworkManager 网络管理\n"
+          DESCRIPTION="${DESCRIPTION}- 设备专用驱动和固件\n"
+          DESCRIPTION="${DESCRIPTION}- USB NCM 网络共享（通过 USB 连接电脑上网）\n"
+          if [[ "${{ env.SYSTEM_TYPE }}" != *"server"* ]]; then
             if [[ "${{ env.SYSTEM_TYPE }}" == *"phosh"* ]]; then
-              DESCRIPTION="${DESCRIPTION}- 包含 ${{ env.DESKTOP_ENV }} 桌面环境\n"
+              DESCRIPTION="${DESCRIPTION}- ${{ env.DESKTOP_ENV }} 移动桌面环境\n"
             else
-              DESCRIPTION="${DESCRIPTION}- 包含 GNOME 桌面环境\n"
+              DESCRIPTION="${DESCRIPTION}- GNOME 桌面环境\n"
             fi
-            DESCRIPTION="${DESCRIPTION}- 已安装 SSH 服务器\n"
-            DESCRIPTION="${DESCRIPTION}- 已安装中文语言支持\n"
-            DESCRIPTION="${DESCRIPTION}- 包含必要的设备驱动和固件\n"
           fi
+          DESCRIPTION="${DESCRIPTION}- 电源管理优化\n\n"
+
+          DESCRIPTION="${DESCRIPTION}### 👤 默认用户\n\n"
+          DESCRIPTION="${DESCRIPTION}| 用户 | 密码 |\n"
+          DESCRIPTION="${DESCRIPTION}|------|------|\n"
+          DESCRIPTION="${DESCRIPTION}| `user` | `1234` |\n"
+          DESCRIPTION="${DESCRIPTION}| `root` | `1234` |\n\n"
+
+          DESCRIPTION="${DESCRIPTION}### 🌐 USB NCM 网络共享\n\n"
+          DESCRIPTION="${DESCRIPTION}通过 USB 连接电脑后，设备会自动创建虚拟网络接口：\n\n"
+          DESCRIPTION="${DESCRIPTION}- **设备端 IP**: `172.16.42.1`\n"
+          DESCRIPTION="${DESCRIPTION}- **电脑端 IP**: `172.16.42.2-254`（DHCP 自动分配）\n"
+          DESCRIPTION="${DESCRIPTION}- **SSH 连接**: `ssh user@172.16.42.1`\n\n"
+
+          DESCRIPTION="${DESCRIPTION}### ⚠️ 注意事项\n\n"
+          DESCRIPTION="${DESCRIPTION}- 首次启动可能需要较长时间（约 1-2 分钟）\n"
+          DESCRIPTION="${DESCRIPTION}- 建议首次登录后修改默认密码\n"
+          DESCRIPTION="${DESCRIPTION}- 桌面版本首次启动可能需要配置显示\n\n"
+
+          DESCRIPTION="${DESCRIPTION}---\n"
+          DESCRIPTION="${DESCRIPTION}*使用 GitHub Actions 自动构建*"
+
 
           echo "tag=$TAG" >> $GITHUB_OUTPUT
           echo "name=$RELEASE_NAME" >> $GITHUB_OUTPUT
