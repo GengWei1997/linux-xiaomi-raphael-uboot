@@ -10,7 +10,7 @@ echo "仓库: $REPO"
 
 mkdir -p xiaomi-raphael-debs_$KERNEL_VERSION
 
-echo "正在下载内核�?.."
+echo "正在下载内核包..."
 curl -sL -o xiaomi-raphael-debs_$KERNEL_VERSION/linux-image-xiaomi-raphael.deb \
     "https://github.com/$REPO/releases/download/kernel-v$KERNEL_VERSION/linux-image-xiaomi-raphael.deb"
 
