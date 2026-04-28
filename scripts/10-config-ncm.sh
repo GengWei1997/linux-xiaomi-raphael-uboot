@@ -4,6 +4,8 @@ set -e
 echo "[$(date +'%Y-%m-%d %H:%M:%S')] [09] 📱 配置 USB NCM 网络"
 
 echo "[$(date +'%Y-%m-%d %H:%M:%S')] [09]   └─ 创建 dnsmasq 配置"
+
+# 配置 NCM
 cat > rootdir/etc/dnsmasq.d/usb-ncm.conf << 'EOF'
 interface=usb0
 bind-dynamic
@@ -12,16 +14,10 @@ dhcp-authoritative
 dhcp-range=172.16.42.2,172.16.42.254,255.255.255.0,1h
 dhcp-option=3,172.16.42.1
 EOF
-
-echo "[$(date +'%Y-%m-%d %H:%M:%S')] [09]   └─ 启用 IP 转发"
-echo "net.ipv4.ip_forward=1" > rootdir/etc/sysctl.d/99-usb-ncm.conf
-
-echo "[$(date +'%Y-%m-%d %H:%M:%S')] [09]   └─ 启用 dnsmasq 服务"
+echo "net.ipv4.ip_forward=1" | tee rootdir/etc/sysctl.d/99-usb-ncm.conf
 chroot rootdir systemctl enable dnsmasq
-
-echo "[$(date +'%Y-%m-%d %H:%M:%S')] [09]   └─ 创建 NCM 配置脚本"
-cat > rootdir/usr/local/sbin/setup-usb-ncm.sh << 'NCM_EOF'
-#!/bin/sh
+cat > rootdir/usr/local/sbin/setup-usb-ncm.sh << 'EOF'
+#!/bin/bash
 set -e
 modprobe libcomposite
 mountpoint -q /sys/kernel/config || mount -t configfs none /sys/kernel/config
@@ -49,10 +45,8 @@ iptables -t nat -C POSTROUTING -o $OUT -j MASQUERADE || iptables -t nat -A POSTR
 iptables -C FORWARD -i $OUT -o usb0 -m state --state RELATED,ESTABLISHED -j ACCEPT || iptables -A FORWARD -i $OUT -o usb0 -m state --state RELATED,ESTABLISHED -j ACCEPT
 iptables -C FORWARD -i usb0 -o $OUT -j ACCEPT || iptables -A FORWARD -i usb0 -o $OUT -j ACCEPT
 systemctl restart dnsmasq || true
-NCM_EOF
+EOF
 chmod +x rootdir/usr/local/sbin/setup-usb-ncm.sh
-
-echo "[$(date +'%Y-%m-%d %H:%M:%S')] [09]   └─ 创建 usb-ncm.service"
 cat > rootdir/etc/systemd/system/usb-ncm.service << 'EOF'
 [Unit]
 Description=USB CDC-NCM gadget setup
