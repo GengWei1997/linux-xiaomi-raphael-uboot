@@ -220,125 +220,70 @@ jobs:
             sha256sums.txt
           retention-days: 30
 
-      - name: 创建 Release
+      - name: 准备 Release 变量
         if: github.event_name == 'workflow_dispatch'
         id: create-release
         run: |
-          SHA256_ROOTFS=$(awk '{print $1}' sha256sums.txt | head -n1)
-          SHA256_BOOT=$(awk '{print $1}' sha256sums.txt | tail -n1)
-
+          # 1. 提取校验和
+          SHA256_ROOTFS=$(awk 'NR==1 {print $1}' sha256sums.txt)
+          SHA256_BOOT=$(awk 'NR==2 {print $1}' sha256sums.txt)
           TIMESTAMP=$(TZ='Asia/Shanghai' date +'%Y-%m-%d %H:%M:%S')
 
-          if [[ "$SYSTEM_TYPE" == *"debian-"* ]]; then
-            OS_NAME="Debian"
-            OS_VERSION="$DEBIAN_VERSION"
-          else
-            OS_NAME="Ubuntu"
-            OS_VERSION="$UBUNTU_VERSION"
+          # 2. 确定系统元数据
+          [[ "${{ env.SYSTEM_TYPE }}" == *"debian-"* ]] && OS_NAME="Debian" || OS_NAME="Ubuntu"
+          [[ "${{ env.SYSTEM_TYPE }}" == *"server"* ]] && CATEGORY="Server" || CATEGORY="Desktop"
+          OS_VERSION="${{ env.DEBIAN_VERSION || env.UBUNTU_VERSION }}"
+          
+          # 3. 构造 Release 标题和标签
+          # 标签: 系统类型-内核-系统版本[-桌面环境]
+          TAG="${{ env.SYSTEM_TYPE }}-v${{ env.KERNEL_VERSION }}-${OS_VERSION}"
+          [[ "${{ env.SYSTEM_TYPE }}" == *"phosh"* ]] && TAG="${TAG}-${{ env.DESKTOP_ENV }}"
+          
+          # 标题: 更加直观的展示
+          RELEASE_TITLE="${OS_NAME} ${CATEGORY} v${{ env.KERNEL_VERSION }} (${OS_VERSION})"
+          if [[ "${{ env.SYSTEM_TYPE }}" == *"phosh"* ]]; then
+            RELEASE_TITLE="${RELEASE_TITLE} - ${{ env.DESKTOP_ENV }}"
+          elif [[ "${{ env.SYSTEM_TYPE }}" == *"gnome"* ]]; then
+            RELEASE_TITLE="${RELEASE_TITLE} - GNOME"
           fi
 
-          if [[ "$SYSTEM_TYPE" == *"server"* ]]; then
-            SYSTEM_CATEGORY="Server"
-          else
-            SYSTEM_CATEGORY="Desktop"
-          fi
-
-          TAG="${SYSTEM_TYPE}-v${KERNEL_VERSION}-${OS_VERSION}"
-          if [[ "$SYSTEM_TYPE" == *"phosh"* ]]; then
-            TAG="${TAG}-${DESKTOP_ENV}"
-          fi
-
-          RELEASE_NAME="${OS_NAME} ${SYSTEM_CATEGORY} 镜像 v${KERNEL_VERSION} (${OS_VERSION})"
-          if [[ "$SYSTEM_TYPE" == *"phosh"* ]]; then
-            RELEASE_NAME="${RELEASE_NAME} - ${DESKTOP_ENV}"
-          elif [[ "$SYSTEM_TYPE" == *"gnome"* ]]; then
-            RELEASE_NAME="${RELEASE_NAME} - GNOME"
-          fi
-
-          cat > release_description.md << 'DESCRIPTION_EOF'
-## 小米 Raphael (K20 Pro) Ubuntu Desktop 镜像
-
-> 适用于小米 Raphael 设备的 Ubuntu Desktop 系统镜像
-
-### 镜像信息
-
-| 属性 | 值 |
-|------|----|
-| 系统版本 | Ubuntu 24.04 |
-| 内核版本 | Linux 7.0 |
-| 构建工具 | mmdebstrap |
-| 构建时间 | TIMESTAMP_PLACEHOLDER |
-| 构建 ID | BUILD_ID_PLACEHOLDER |
-
-### SHA256 校验和
-
-下载后请验证文件完整性：
-
-- rootfs.img: SHA256_ROOTFS_PLACEHOLDER
-- xiaomi-k20pro-boot.img: SHA256_BOOT_PLACEHOLDER
-
-### 包含组件
-
-- SSH 服务器（已启用密码登录）
-- 中文语言支持
-- NetworkManager 网络管理
-- 设备专用驱动和固件
-- USB NCM 网络共享（通过 USB 连接电脑上网）
-
-### 默认用户
-
-| 用户 | 密码 |
-|------|------|
-| user | 1234 |
-| root | 1234 |
-
-### USB NCM 网络共享
-
-通过 USB 连接电脑后，设备会自动创建虚拟网络接口：
-
-- 设备端 IP: 172.16.42.1
-- 电脑端 IP: 172.16.42.2-254（DHCP 自动分配）
-- SSH 连接: ssh user@172.16.42.1
-
-### 注意事项
-
-- 首次启动可能需要较长时间（约 1-2 分钟）
-- 建议首次登录后修改默认密码
-- 桌面版本首次启动可能需要配置显示
-
----
-
-*使用 GitHub Actions 自动构建*
-DESCRIPTION_EOF
-
-          sed -i "s|TIMESTAMP_PLACEHOLDER|${TIMESTAMP}|g" release_description.md
-          sed -i "s|BUILD_ID_PLACEHOLDER|${GITHUB_RUN_ID}-${GITHUB_RUN_NUMBER}|g" release_description.md
-          sed -i "s|SHA256_ROOTFS_PLACEHOLDER|${SHA256_ROOTFS}|g" release_description.md
-          sed -i "s|SHA256_BOOT_PLACEHOLDER|${SHA256_BOOT}|g" release_description.md
-          sed -i "s|Ubuntu 24.04|${OS_NAME} ${OS_VERSION}|g" release_description.md
-          sed -i "s|Linux 7.0|Linux ${KERNEL_VERSION}|g" release_description.md
-          sed -i "s|mmdebstrap|${BOOTSTRAP_TOOL}|g" release_description.md
-
-          if [[ "$SYSTEM_TYPE" == *"phosh"* ]]; then
-            sed -i 's|Ubuntu Desktop|'"${OS_NAME}"' Desktop|g' release_description.md
-            sed -i 's|Desktop 镜像|'"${DESKTOP_ENV}"' 镜像|g' release_description.md
-          elif [[ "$SYSTEM_TYPE" == *"gnome"* ]]; then
-            sed -i 's|Ubuntu Desktop|'"${OS_NAME}"' Desktop - GNOME|g' release_description.md
-          fi
-
-          if [[ "$SYSTEM_TYPE" == *"server"* ]]; then
-            sed -i 's|Ubuntu Desktop|Ubuntu Server|g' release_description.md
-          fi
-
-          DESCRIPTION_CONTENT=$(cat release_description.md)
+          # 4. 直接利用 Heredoc 生成描述内容 (无需 sed)
+          {
+            echo "description<<EOF"
+            echo "## 小米 Raphael (K20 Pro) ${OS_NAME} 镜像"
+            echo ""
+            echo "> 适用于小米 Raphael (K20 Pro/Mi 9T Pro) 的 ${OS_NAME} ${CATEGORY} 自动构建版本"
+            echo ""
+            echo "### 📊 镜像信息"
+            echo "| 属性 | 值 |"
+            echo "|------|----|"
+            echo "| 系统版本 | ${OS_NAME} ${OS_VERSION} |"
+            echo "| 内核版本 | Linux ${{ env.KERNEL_VERSION }} |"
+            echo "| 构建工具 | ${{ env.BOOTSTRAP_TOOL }} |"
+            echo "| 构建时间 | ${TIMESTAMP} |"
+            echo "| 构建 ID | ${GITHUB_RUN_ID} |"
+            echo ""
+            echo "### 🔒 SHA256 校验和"
+            echo "\`\`\`"
+            echo "rootfs.img: ${SHA256_ROOTFS}"
+            echo "boot.img:   ${SHA256_BOOT}"
+            echo "\`\`\`"
+            echo ""
+            echo "### 🔑 默认凭据"
+            echo "- **用户**: \`user\` / **密码**: \`1234\`"
+            echo "- **用户**: \`root\` / **密码**: \`1234\`"
+            echo ""
+            echo "### 🌐 网络连接 (USB NCM)"
+            echo "- 设备 IP: \`172.16.42.1\`"
+            echo "- SSH 命令: \`ssh user@172.16.42.1\`"
+            echo ""
+            echo "---"
+            echo "*Built with ❤️ by GitHub Actions*"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
 
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
-          echo "name=${RELEASE_NAME}" >> $GITHUB_OUTPUT
-          echo "description<<EOF" >> $GITHUB_OUTPUT
-          echo "$DESCRIPTION_CONTENT" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-          rm -f release_description.md
+          echo "name=${RELEASE_TITLE}" >> $GITHUB_OUTPUT
 
       - name: 发布 Release
         if: github.event_name == 'workflow_dispatch'
