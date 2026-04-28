@@ -26,7 +26,7 @@ BASE_PACKAGES="bash-completion sudo apt-utils ssh openssh-server nano network-ma
 if [[ "$SYSTEM_TYPE" == *"debian-"* ]]; then
     BASE_PACKAGES="$BASE_PACKAGES systemd-boot dnsmasq fonts-wqy-microhei"
 elif [[ "$SYSTEM_TYPE" == *"ubuntu-"* ]]; then
-    BASE_PACKAGES="$BASE_PACKAGES systemd-boot dnsmasq-base language-pack-zh-hans iptables"
+    BASE_PACKAGES="$BASE_PACKAGES systemd-boot dnsmasq language-pack-zh-hans iptables"
 fi
 
 # 设备特定包
