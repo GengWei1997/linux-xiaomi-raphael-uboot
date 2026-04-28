@@ -23,13 +23,13 @@ on:
           - '7.0'
         default: '7.0'
       bootstrap_tool:
-        description: '构建工具'
+        description: '构建工具(debian不推荐使用mmdebstrap)'
         required: true
         type: choice
         options:
           - mmdebstrap
           - debootstrap
-        default: 'mmdebstrap'
+        default: 'debootstrap'
       desktop_environment:
         description: '桌面环境 (仅适用于Phosh版本)'
         required: false
