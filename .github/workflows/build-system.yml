@@ -108,8 +108,8 @@ jobs:
           if [ "${{ env.BOOTSTRAP_TOOL }}" = "mmdebstrap" ]; then
             if ! command -v mmdebstrap &> /dev/null; then
               echo "[$(date +'%Y-%m-%d %H:%M:%S')]   └─ 安装 mmdebstrap 和依赖..."
-              sudo apt update
-              sudo apt install -y mmdebstrap debian-archive-keyring
+              sudo apt-get update
+              sudo apt-get install -y mmdebstrap debian-archive-keyring
               echo "[$(date +'%Y-%m-%d %H:%M:%S')]   └─ mmdebstrap 安装完成 ✅"
             else
               echo "[$(date +'%Y-%m-%d %H:%M:%S')]   └─ mmdebstrap 已安装，跳过"
@@ -117,8 +117,8 @@ jobs:
           else
             if ! command -v debootstrap &> /dev/null; then
               echo "[$(date +'%Y-%m-%d %H:%M:%S')]   └─ 安装 debootstrap..."
-              sudo apt update
-              sudo apt install -y debootstrap
+              sudo apt-get update
+              sudo apt-get install -y debootstrap
               echo "[$(date +'%Y-%m-%d %H:%M:%S')]   └─ debootstrap 安装完成 ✅"
             else
               echo "[$(date +'%Y-%m-%d %H:%M:%S')]   └─ debootstrap 已安装，跳过"
