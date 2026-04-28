@@ -17,6 +17,7 @@ umount rootdir 2>/dev/null || true
 rm -d rootdir 2>/dev/null || true
 
 echo "[$(date +'%Y-%m-%d %H:%M:%S')] [15]   └─ 设置镜像 UUID: ${IMAGE_UUID}"
+e2fsck -f ${IMAGE_NAME}
 tune2fs -U ${IMAGE_UUID} ${IMAGE_NAME}
 
 echo ""
