@@ -21,7 +21,29 @@ fi
 
 echo "[$(date +'%Y-%m-%d %H:%M:%S')] [02]   └─ 开始 bootstrap (这可能需要几分钟...)"
 if [ "$BOOTSTRAP_TOOL" = "mmdebstrap" ]; then
-    mmdebstrap $OS_VERSION rootdir
+    if [[ "$SYSTEM_TYPE" == *"debian-"* ]]; then
+        mmdebstrap \
+            --arch=arm64 \
+            --include=ca-certificates,debian-archive-keyring,gpgv,systemd,iptables,dnsmasq,iproute2 \
+            --components=main,contrib,non-free,non-free-firmware \
+            "$OS_VERSION" \
+            rootdir \
+            "deb http://deb.debian.org/debian $OS_VERSION main contrib non-free non-free-firmware" \
+            "deb http://deb.debian.org/debian ${OS_VERSION}-updates main contrib non-free non-free-firmware" \
+            "deb http://security.debian.org/debian-security ${OS_VERSION}-security main contrib non-free non-free-firmware" \
+            "deb http://deb.debian.org/debian ${OS_VERSION}-backports main contrib non-free non-free-firmware"
+    else
+        mmdebstrap \
+            --arch=arm64 \
+            --include=ca-certificates,ubuntu-archive-keyring,gpgv,systemd,iptables,dnsmasq,iproute2 \
+            --components=main,universe,restricted,multiverse \
+            "$OS_VERSION" \
+            rootdir \
+            "deb http://ports.ubuntu.com/ubuntu-ports $OS_VERSION main universe restricted multiverse" \
+            "deb http://ports.ubuntu.com/ubuntu-ports ${OS_VERSION}-updates main universe restricted multiverse" \
+            "deb http://ports.ubuntu.com/ubuntu-ports ${OS_VERSION}-security main universe restricted multiverse" \
+            "deb http://ports.ubuntu.com/ubuntu-ports ${OS_VERSION}-backports main universe restricted multiverse"
+    fi
 elif [ "$BOOTSTRAP_TOOL" = "debootstrap" ]; then
     debootstrap $OS_VERSION rootdir $MIRROR
 else
