@@ -19,7 +19,7 @@ echo "[$(date +'%Y-%m-%d %H:%M:%S')] [06]   └─ 更新系统包..."
 chroot rootdir apt update
 chroot rootdir apt upgrade -y
 
-BASE_PACKAGES="bash-completion sudo apt-utils ssh openssh-server nano network-manager initramfs-tools chrony curl wget locales tzdata iproute2"
+BASE_PACKAGES="bash-completion netplan sudo apt-utils ssh openssh-server nano network-manager initramfs-tools chrony curl wget locales tzdata iproute2"
 
 if [[ "$SYSTEM_TYPE" == *"debian-"* ]]; then
     BASE_PACKAGES="$BASE_PACKAGES systemd-boot dnsmasq fonts-wqy-microhei"
