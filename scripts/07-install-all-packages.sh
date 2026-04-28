@@ -60,7 +60,7 @@ if [ -n "$DESKTOP_PACKAGES" ]; then
 fi
 
 echo "[$(date +'%Y-%m-%d %H:%M:%S')] [06]   └─ 开始安装（这可能需要几分钟...）"
-chroot rootdir apt-get install -y --ignore-missing $ALL_PACKAGES || true
+chroot rootdir apt-get install -y $ALL_PACKAGES
 
 if [[ "$SYSTEM_TYPE" == *"debian-"* ]]; then
     echo "[$(date +'%Y-%m-%d %H:%M:%S')] [06]   └─ 修复 Debian dpkg 错误"
