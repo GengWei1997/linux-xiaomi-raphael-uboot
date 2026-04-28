@@ -22,10 +22,9 @@ chroot rootdir apt-get upgrade -y
 BASE_PACKAGES="bash-completion sudo apt-utils ssh openssh-server nano network-manager initramfs-tools chrony curl wget locales tzdata iproute2"
 
 if [[ "$SYSTEM_TYPE" == *"debian-"* ]]; then 
-
     BASE_PACKAGES="bash-completion sudo apt-utils ssh openssh-server nano network-manager systemd-boot initramfs-tools chrony curl wget locales tzdata fonts-wqy-microhei dnsmasq iptables iproute2"
 elif [[ "$SYSTEM_TYPE" == *"ubuntu-"* ]]; then
-    BASE_PACKAGES="$BASE_PACKAGES systemd-boot dnsmasq language-pack-zh-hans iptables"
+    BASE_PACKAGES="bash-completion sudo apt-utils ssh openssh-server nano network-manager systemd-boot initramfs-tools chrony curl wget locales tzdata language-pack-zh-hans dnsmasq iptables iproute2"
 fi
 
 DEVICE_PACKAGES="rmtfs protection-domain-mapper tqftpserv"
@@ -71,7 +70,10 @@ if [[ "$SYSTEM_TYPE" == *"debian-"* ]]; then
     chroot rootdir apt-get -f install -y 2>/dev/null || true
 fi
 
-sed -i '/ConditionKernelVersion/d' rootdir/lib/systemd/system/pd-mapper.service 2>/dev/null || true
+# 修改服务配置
+if [[ "$SYSTEM_TYPE" == *"debian-"* ]]; then
+    sed -i '/ConditionKernelVersion/d' rootdir/lib/systemd/system/pd-mapper.service 2>/dev/null || true
+fi
 
 if [[ "$SYSTEM_TYPE" != *"server"* ]]; then
     if [ "$DESKTOP_ENV" = "gnome" ]; then

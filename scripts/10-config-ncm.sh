@@ -17,7 +17,7 @@ EOF
 echo "net.ipv4.ip_forward=1" | tee rootdir/etc/sysctl.d/99-usb-ncm.conf
 chroot rootdir systemctl enable dnsmasq
 cat > rootdir/usr/local/sbin/setup-usb-ncm.sh << 'EOF'
-#!/bin/bash
+#!/bin/sh
 set -e
 modprobe libcomposite
 mountpoint -q /sys/kernel/config || mount -t configfs none /sys/kernel/config
