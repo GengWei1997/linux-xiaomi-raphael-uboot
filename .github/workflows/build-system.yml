@@ -365,9 +365,12 @@ jobs:
         run: |
           TIMESTAMP="${{ steps.release-info.outputs.timestamp }}"
           ARTIFACTS_DIR="artifacts"
+          RELEASE_DIR="release-files"
+          
+          # 创建统一发布目录
+          mkdir -p "${RELEASE_DIR}"
           
           # 初始化数组
-          RELEASE_FILES=""
           LARGE_FILES=""
           FILE_LIST=""
           
@@ -409,8 +412,8 @@ jobs:
                 FILE_LIST="${FILE_LIST}
           - ⚠️ **${filename}** (文件过大，请从 Artifacts 下载)"
               else
-                # 小文件：加入 Release
-                RELEASE_FILES="${RELEASE_FILES}${file} "
+                # 小文件：加入 Release，创建符号链接到统一目录
+                ln -sf "$(realpath "$file")" "${RELEASE_DIR}/${filename}"
                 FILE_LIST="${FILE_LIST}
           - ✅ **${filename}**"
               fi
@@ -421,8 +424,10 @@ jobs:
             done
           done
           
-          # 输出到 GITHUB_OUTPUT
-          echo "release_files=${RELEASE_FILES}" >> $GITHUB_OUTPUT
+          # 列出要上传的文件
+          echo "要上传到 Release 的文件:"
+          ls -la ${RELEASE_DIR}/
+          
           {
             echo "large_files<<EOF"
             echo "$LARGE_FILES"
@@ -490,6 +495,6 @@ jobs:
           body: ${{ steps.description.outputs.body }}
           draft: false
           prerelease: false
-          files: ${{ steps.classify.outputs.release_files }}
+          files: release-files/*.7z
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

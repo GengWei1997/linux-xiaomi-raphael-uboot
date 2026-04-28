@@ -32,7 +32,11 @@ DEVICE_PACKAGES="rmtfs protection-domain-mapper tqftpserv"
 if [[ "$SYSTEM_TYPE" != *"server"* ]]; then
     case "$DESKTOP_ENV" in
         "gnome")
-            DESKTOP_PACKAGES="gnome gnome-terminal gdm3"
+            if [[ "$SYSTEM_TYPE" == *"ubuntu-"* ]]; then
+                DESKTOP_PACKAGES="ubuntu-desktop"
+            elif [[ "$SYSTEM_TYPE" == *"debian-"* ]]; then
+                DESKTOP_PACKAGES="gnome"
+            fi
             ;;
         "phosh-core")
             DESKTOP_PACKAGES="phosh phoc squeekboard"
@@ -91,6 +95,13 @@ if [ -f "alsa-xiaomi-raphael.deb" ]; then
     cp alsa-xiaomi-raphael.deb rootdir/tmp/
     chroot rootdir dpkg -i /tmp/alsa-xiaomi-raphael.deb
     rm rootdir/tmp/alsa-xiaomi-raphael.deb
+fi
+
+if [[ "$SYSTEM_TYPE" != *"server"* ]]; then
+    if [[ "$DESKTOP_ENV" == phosh* ]]; then
+        echo "[$(date +'%Y-%m-%d %H:%M:%S')] [06]   └─ 启用 Phosh 服务"
+        chroot rootdir systemctl enable phosh
+    fi
 fi
 
 echo "[$(date +'%Y-%m-%d %H:%M:%S')] [06] ✅ 软件包安装完成"
