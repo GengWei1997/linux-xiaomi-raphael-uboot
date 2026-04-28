@@ -3,7 +3,6 @@ set -e
 
 echo "[10] 配置 USB NCM 网络"
 
-mkdir -p rootdir/etc/dnsmasq.d
 cat > rootdir/etc/dnsmasq.d/usb-ncm.conf << 'EOF'
 interface=usb0
 bind-dynamic
