@@ -109,7 +109,7 @@ jobs:
           {"system_type": "ubuntu-gnome", "kernel_version": "7.0", "bootstrap_tool": "mmdebstrap", "debian_version": "", "ubuntu_version": "resolute", "desktop_env": ""},
           {"system_type": "ubuntu-phosh", "kernel_version": "6.18", "bootstrap_tool": "mmdebstrap", "debian_version": "", "ubuntu_version": "resolute", "desktop_env": "phosh-full"},
           {"system_type": "ubuntu-phosh", "kernel_version": "7.0", "bootstrap_tool": "mmdebstrap", "debian_version": "", "ubuntu_version": "resolute", "desktop_env": "phosh-full"}
-        ]') || fromJSON('[{"system_type": "'${{ github.event.inputs.system_type }}'", "kernel_version": "'${{ github.event.inputs.kernel_version }}'", "bootstrap_tool": "'${{ github.event.inputs.bootstrap_tool }}'", "debian_version": "'${{ github.event.inputs.debian_version }}'", "ubuntu_version": "'${{ github.event.inputs.ubuntu_version }}'", "desktop_env": "'${{ github.event.inputs.desktop_environment }}'"}]') }}
+        ]') || fromJSON(format('[{{"system_type": "{0}", "kernel_version": "{1}", "bootstrap_tool": "{2}", "debian_version": "{3}", "ubuntu_version": "{4}", "desktop_env": "{5}"}}]', github.event.inputs.system_type, github.event.inputs.kernel_version, github.event.inputs.bootstrap_tool, github.event.inputs.debian_version, github.event.inputs.ubuntu_version, github.event.inputs.desktop_environment)) }}
     env:
       SYSTEM_TYPE: ${{ matrix.system_type || github.event.inputs.system_type }}
       KERNEL_VERSION: ${{ matrix.kernel_version || github.event.inputs.kernel_version }}
