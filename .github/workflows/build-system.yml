@@ -47,7 +47,7 @@ on:
           - phosh-phone
       debian_version:
         description: 'Debian 版本 (仅适用于Debian类型)'
-        required: false
+        required: true
         type: choice
         options:
           - trixie
@@ -55,7 +55,7 @@ on:
         default: 'trixie'
       ubuntu_version:
         description: 'Ubuntu 版本 (仅适用于Ubuntu类型)'
-        required: false
+        required: true
         type: choice
         options:
           - noble
@@ -95,6 +95,7 @@ jobs:
     name: ${{ github.event.inputs.enable_parallel == 'true' && format('构建 {0} 镜像', matrix.system_type) || '构建单镜像' }}
     runs-on: ubuntu-24.04-arm
     strategy:
+      fail-fast: false
       matrix:
         include: ${{ github.event.inputs.enable_parallel == 'true' && fromJSON('[{"system_type":"debian-server","kernel_version":"6.18","bootstrap_tool":"mmdebstrap","debian_version":"trixie","ubuntu_version":"","desktop_env":""},{"system_type":"debian-server","kernel_version":"7.0","bootstrap_tool":"mmdebstrap","debian_version":"trixie","ubuntu_version":"","desktop_env":""},{"system_type":"debian-gnome","kernel_version":"6.18","bootstrap_tool":"mmdebstrap","debian_version":"trixie","ubuntu_version":"","desktop_env":""},{"system_type":"debian-gnome","kernel_version":"7.0","bootstrap_tool":"mmdebstrap","debian_version":"trixie","ubuntu_version":"","desktop_env":""},{"system_type":"debian-phosh","kernel_version":"6.18","bootstrap_tool":"mmdebstrap","debian_version":"trixie","ubuntu_version":"","desktop_env":"phosh-full"},{"system_type":"debian-phosh","kernel_version":"7.0","bootstrap_tool":"mmdebstrap","debian_version":"trixie","ubuntu_version":"","desktop_env":"phosh-full"},{"system_type":"ubuntu-server","kernel_version":"6.18","bootstrap_tool":"mmdebstrap","debian_version":"","ubuntu_version":"resolute","desktop_env":""},{"system_type":"ubuntu-server","kernel_version":"7.0","bootstrap_tool":"mmdebstrap","debian_version":"","ubuntu_version":"resolute","desktop_env":""},{"system_type":"ubuntu-gnome","kernel_version":"6.18","bootstrap_tool":"mmdebstrap","debian_version":"","ubuntu_version":"resolute","desktop_env":""},{"system_type":"ubuntu-gnome","kernel_version":"7.0","bootstrap_tool":"mmdebstrap","debian_version":"","ubuntu_version":"resolute","desktop_env":""},{"system_type":"ubuntu-phosh","kernel_version":"6.18","bootstrap_tool":"mmdebstrap","debian_version":"","ubuntu_version":"resolute","desktop_env":"phosh-full"},{"system_type":"ubuntu-phosh","kernel_version":"7.0","bootstrap_tool":"mmdebstrap","debian_version":"","ubuntu_version":"resolute","desktop_env":"phosh-full"}]') || fromJSON(format('[{{"system_type":"{0}","kernel_version":"{1}","bootstrap_tool":"{2}","debian_version":"{3}","ubuntu_version":"{4}","desktop_env":"{5}"}}]', github.event.inputs.system_type, github.event.inputs.kernel_version, github.event.inputs.bootstrap_tool, github.event.inputs.debian_version, github.event.inputs.ubuntu_version, github.event.inputs.desktop_environment)) }}
     env:

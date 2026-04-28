@@ -9,10 +9,10 @@ DESKTOP_ENV="${3:-phosh-full}"
 
 # 解析发行版版本参数
 if [[ "$SYSTEM_TYPE" == *"debian-"* ]]; then
-    DEBIAN_VERSION="${4:-trixie}"
+    DEBIAN_VERSION="${DEBIAN_VERSION:?请设置 DEBIAN_VERSION 环境变量}"
     export DEBIAN_VERSION
 elif [[ "$SYSTEM_TYPE" == *"ubuntu-"* ]]; then
-    UBUNTU_VERSION="${4:-resolute}"
+    UBUNTU_VERSION="${UBUNTU_VERSION:?请设置 UBUNTU_VERSION 环境变量}"
     export UBUNTU_VERSION
 fi
 
