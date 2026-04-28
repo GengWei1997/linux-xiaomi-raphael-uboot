@@ -1,9 +1,9 @@
 #!/bin/bash
 set -e
 
-echo "[$(date +'%Y-%m-%d %H:%M:%S')] [09] 📱 配置 USB NCM 网络"
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] [10] 📱 配置 USB NCM 网络"
 
-echo "[$(date +'%Y-%m-%d %H:%M:%S')] [09]   └─ 创建 dnsmasq 配置"
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] [10]   └─ 创建 dnsmasq 配置"
 
 # 配置 NCM
 cat > rootdir/etc/dnsmasq.d/usb-ncm.conf << 'EOF'
@@ -62,7 +62,7 @@ RemainAfterExit=yes
 WantedBy=multi-user.target
 EOF
 
-echo "[$(date +'%Y-%m-%d %H:%M:%S')] [09]   └─ 启用 usb-ncm 服务"
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] [10]   └─ 启用 usb-ncm 服务"
 chroot rootdir systemctl enable usb-ncm
 
-echo "[$(date +'%Y-%m-%d %H:%M:%S')] [09] ✅ USB NCM 配置完成"
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] [10] �?USB NCM 配置完成"
