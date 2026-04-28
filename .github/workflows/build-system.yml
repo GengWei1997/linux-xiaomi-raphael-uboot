@@ -79,40 +79,42 @@ jobs:
       - name: 生成构建矩阵
         id: generate
         run: |
-          if [ "${{ github.event.inputs.build_mode }}" = "single" ]; then
+          set -e
+          
+          BUILD_MODE="${{ github.event.inputs.build_mode }}"
+          SYS_TYPES="${{ github.event.inputs.system_types }}"
+          KERN_VERS="${{ github.event.inputs.kernel_versions }}"
+          BOOT_TOOLS="${{ github.event.inputs.bootstrap_tools }}"
+          DESKTOP_ENV="${{ github.event.inputs.desktop_environments }}"
+          DEB_VERS="${{ github.event.inputs.debian_versions }}"
+          UBU_VERS="${{ github.event.inputs.ubuntu_versions }}"
+          
+          if [ "$BUILD_MODE" = "single" ]; then
             # 单模式：取每个输入的第一个值
-            SYS_TYPE=$(echo "${{ github.event.inputs.system_types }}" | cut -d',' -f1)
-            KERN_VER=$(echo "${{ github.event.inputs.kernel_versions }}" | cut -d',' -f1)
-            TOOL=$(echo "${{ github.event.inputs.bootstrap_tools }}" | cut -d',' -f1)
-            DESKTOP="${{ github.event.inputs.desktop_environments }}"
+            SYS_TYPE=$(echo "$SYS_TYPES" | cut -d',' -f1)
+            KERN_VER=$(echo "$KERN_VERS" | cut -d',' -f1)
+            TOOL=$(echo "$BOOT_TOOLS" | cut -d',' -f1)
             
             if [[ "$SYS_TYPE" == debian-* ]]; then
-              DEB_VER=$(echo "${{ github.event.inputs.debian_versions }}" | cut -d',' -f1)
+              DEB_VER=$(echo "$DEB_VERS" | cut -d',' -f1)
               UBU_VER=""
             else
               DEB_VER=""
-              UBU_VER=$(echo "${{ github.event.inputs.ubuntu_versions }}" | cut -d',' -f1)
+              UBU_VER=$(echo "$UBU_VERS" | cut -d',' -f1)
             fi
             
-            MATRIX="[{"system_type":"$SYS_TYPE","kernel_version":"$KERN_VER","bootstrap_tool":"$TOOL","debian_version":"$DEB_VER","ubuntu_version":"$UBU_VER","desktop_env":"$DESKTOP"}]"
+            MATRIX="[{"system_type":"$SYS_TYPE","kernel_version":"$KERN_VER","bootstrap_tool":"$TOOL","debian_version":"$DEB_VER","ubuntu_version":"$UBU_VER","desktop_env":"$DESKTOP_ENV"}]"
           else
-            # 并行模式：解析输入并生成所有组合
-            MATRIX='[]'
-            
-            # 解析输入参数
-            SYSTEMS="${{ github.event.inputs.system_types }}"
-            KERNELS="${{ github.event.inputs.kernel_versions }}"
-            TOOLS="${{ github.event.inputs.bootstrap_tools }}"
-            DESKTOP="${{ github.event.inputs.desktop_environments }}"
-            DEBIAN_VERSIONS="${{ github.event.inputs.debian_versions }}"
-            UBUNTU_VERSIONS="${{ github.event.inputs.ubuntu_versions }}"
+            # 并行模式：使用纯 bash 生成 JSON
+            MATRIX="["
+            FIRST_ITEM=true
             
             # 分割字符串为数组
-            IFS=',' read -ra SYS_ARRAY <<< "$SYSTEMS"
-            IFS=',' read -ra KERN_ARRAY <<< "$KERNELS"
-            IFS=',' read -ra TOOL_ARRAY <<< "$TOOLS"
-            IFS=',' read -ra DEB_ARRAY <<< "$DEBIAN_VERSIONS"
-            IFS=',' read -ra UBU_ARRAY <<< "$UBUNTU_VERSIONS"
+            IFS=',' read -ra SYS_ARRAY <<< "$SYS_TYPES"
+            IFS=',' read -ra KERN_ARRAY <<< "$KERN_VERS"
+            IFS=',' read -ra TOOL_ARRAY <<< "$BOOT_TOOLS"
+            IFS=',' read -ra DEB_ARRAY <<< "$DEB_VERS"
+            IFS=',' read -ra UBU_ARRAY <<< "$UBU_VERS"
             
             # 生成 Debian 组合
             for sys in "${SYS_ARRAY[@]}"; do
@@ -120,7 +122,12 @@ jobs:
                 for kern in "${KERN_ARRAY[@]}"; do
                   for tool in "${TOOL_ARRAY[@]}"; do
                     for deb_ver in "${DEB_ARRAY[@]}"; do
-                      MATRIX=$(echo "$MATRIX" | jq ". += [{\"system_type\":\"$sys\",\"kernel_version\":\"$kern\",\"bootstrap_tool\":\"$tool\",\"debian_version\":\"$deb_ver\",\"ubuntu_version\":\"\",\"desktop_env\":\"$DESKTOP\"}]")
+                      if [ "$FIRST_ITEM" = true ]; then
+                        FIRST_ITEM=false
+                      else
+                        MATRIX="${MATRIX},"
+                      fi
+                      MATRIX="${MATRIX}{\"system_type\":\"$sys\",\"kernel_version\":\"$kern\",\"bootstrap_tool\":\"$tool\",\"debian_version\":\"$deb_ver\",\"ubuntu_version\":\"\",\"desktop_env\":\"$DESKTOP_ENV\"}"
                     done
                   done
                 done
@@ -133,14 +140,22 @@ jobs:
                 for kern in "${KERN_ARRAY[@]}"; do
                   for tool in "${TOOL_ARRAY[@]}"; do
                     for ubu_ver in "${UBU_ARRAY[@]}"; do
-                      MATRIX=$(echo "$MATRIX" | jq ". += [{\"system_type\":\"$sys\",\"kernel_version\":\"$kern\",\"bootstrap_tool\":\"$tool\",\"debian_version\":\"\",\"ubuntu_version\":\"$ubu_ver\",\"desktop_env\":\"$DESKTOP\"}]")
+                      if [ "$FIRST_ITEM" = true ]; then
+                        FIRST_ITEM=false
+                      else
+                        MATRIX="${MATRIX},"
+                      fi
+                      MATRIX="${MATRIX}{\"system_type\":\"$sys\",\"kernel_version\":\"$kern\",\"bootstrap_tool\":\"$tool\",\"debian_version\":\"\",\"ubuntu_version\":\"$ubu_ver\",\"desktop_env\":\"$DESKTOP_ENV\"}"
                     done
                   done
                 done
               fi
             done
+            
+            MATRIX="${MATRIX}]"
           fi
           
+          echo "Generated matrix: $MATRIX"
           echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
 
   build:
