@@ -1,213 +1,131 @@
-# 小米 Redmi K20 Pro (Raphael) 系统镜像构建框架
+# 小米 Raphael 设备 Linux 系统镜像构建项目
 
-## 项目简介
+本项目提供用于小米 Raphael 设备（Redmi K20 Pro）的 Debian/Ubuntu Linux 系统镜像构建脚本和自动化工作流，支持桌面环境和服务器版本。
 
-本项目提供了一个统一的构建框架，用于为小米 Redmi K20 Pro (代号 Raphael) 构建各种 Linux 系统镜像。支持以下系统类型：
+## 📋 项目概述
 
-- **Debian Server** - 无图形界面的服务器版本
-- **Debian GNOME** - 带有 GNOME 桌面的版本
-- **Debian Phosh** - 带有 Phosh 移动桌面的版本
-- **Ubuntu Server** - 无图形界面的服务器版本
-- **Ubuntu GNOME** - 带有 GNOME 桌面的版本
-- **Ubuntu Phosh** - 带有 Phosh 移动桌面的版本
+本项目包含完整的构建工具链，可用于构建适用于小米 Raphael 设备的 Linux 系统镜像，包括：
 
-## 目录结构
+- **内核编译工作流** - 自动化编译定制的 Linux 内核
+- **Debian gnome** - 带 gnome 桌面环境的 Debian 系统
+- **Debian Phosh** - 带 Phosh 桌面环境的 Debian 系统
+- **Debian Server** - 无图形界面的 Debian 服务器系统
+- **Ubuntu gnome** - 带 gnome 桌面环境的 Ubuntu 系统
+- **Ubuntu Phosh** - 带 Phosh 桌面环境的 Ubuntu 系统
+- **Ubuntu Server** - 无图形界面的 Ubuntu 服务器系统
 
-```
-├── .github/workflows/        # GitHub Actions 工作流
-│   ├── build-system.yml      # 统一构建工作流
-│   └── 构建rootfs镜像.yaml   # 旧版工作流（保留）
-├── config/                   # 配置文件
-│   ├── build-config.sh       # 构建配置
-│   ├── sources.list.tpl      # 镜像源模板
-│   └── netplan.yaml.tpl      # 网络配置模板
-├── scripts/                  # 模块化构建脚本
-│   ├── 01-create-image.sh    # 创建镜像
-│   ├── 02-bootstrap.sh       # 安装基础系统
-│   ├── ...                   # 其他构建步骤
-│   └── 16-finalize.sh        # 完成镜像
-├── build.sh                  # 统一构建入口
-├── debian-*.sh               # 兼容性脚本
-├── ubuntu-*.sh               # 兼容性脚本
-└── README.md                 # 说明文档
-```
+## 📋 目前工作
 
-## 系统要求
+- ✅ Wi-Fi (2.4Ghz，5Ghz)
+- ✅ 蓝牙 (文件传输，音频)
+- ✅ USB (ssh，OTG)
+- ✅ 电池
+- ✅ 实时时钟
+- ✅ 显示
+- ✅ 触摸
+- ✅ 手电筒 (LED及强度调节)
+- ✅ GPU
+- ✅ FDE
 
-- **硬件**：ARM64 架构设备（如树莓派 4、Apple Silicon Mac）或支持 QEMU 模拟的 x86 设备
-- **软件**：
-  - Ubuntu 22.04+ 或 Debian 11+
-  - root 权限
-  - debootstrap（标准模式）
-  - Docker（Docker 加速模式）
-  - p7zip-full
-  - coreutils
-  - curl
+## 🚀 快速开始
 
-## 构建方法
+### 使用 GitHub Actions 自动化构建
 
-### 1. 下载内核包
+1. **Fork 本仓库**到你的 GitHub 账户
 
-```bash
-# 下载指定版本的内核包
-./scripts/download-deps.sh 6.18
-```
+2. **构建内核**：
+   - 进入仓库的 Actions 页面
+   - 选择 "内核编译" 工作流
+   - 点击 "Run workflow"
+   - 输入内核版本号（如 `6.18`）
+   - 等待构建完成，产物将自动发布到 Releases
 
-### 2. 标准构建模式
+3. **构建系统镜像**：
+   - 选择 "构建系统镜像" 工作流
+   - 点击 "Run workflow"
+   - 选择系统类型：
+       - `debian-gnome`：Debian gnome 版
+       - `debian-phosh`：Debian Phosh 版
+       - `debian-server`：Debian 服务器版
+       - `ubuntu-gnome`：Ubuntu gnome 版
+       - `ubuntu-phosh`：Ubuntu Phosh 版
+       - `ubuntu-server`：Ubuntu 服务器版
+   - 内核版本号：
+       - `上一步构建的内核版本号`
+   - 选择桌面环境（仅适用于Phosh版本，GNOME版本和server版本无需选择）：
+       - `phosh-core`：基础 Phosh 环境
+       - `phosh-full`：完整的 Phosh 环境
+       - `phosh-phone`：手机优化的 Phosh 环境
+   - 等待构建完成，镜像将自动发布到 Releases
 
-使用统一构建脚本：
+## 📦 镜像特性
 
-```bash
-# 构建 Debian Server 镜像（默认使用 trixie 版本）
-sudo ./build.sh debian-server 6.18
+### 通用特性
+- ✅ 清华大学软件源
+- ✅ 简体中文语言环境
+- ✅ 中国标准时区
+- ✅ 支持NCM（usb连接电脑，ssh示例：`ssh user@172.16.42.1`）
+- ✅ 预装 SSH 服务器
+- ✅ 允许 root SSH 登录
+- ✅ 包含必要的设备驱动和固件
+- ✅ 默认用户：`user`（密码：`1234`），`root`（密码：`1234`）
+- ✅ [一键更新内核脚本](https://github.com/GengWei1997/kernel-deb)
 
-# 构建指定 Debian 版本的镜像
-sudo ./build.sh debian-server 6.18 "" bookworm
+### 桌面版额外特性
+- ✅ GNOME 桌面环境(电源键无法息屏）
+- ✅ Phosh 移动桌面环境
 
-# 构建 Ubuntu Server 镜像（默认使用 resolute 版本）
-sudo ./build.sh ubuntu-server 6.18
+### 服务器版额外特性
+- ✅ 网络管理器
+- ✅ 开机15秒后自动熄屏
+- ✅ 命令行输入 `leijun` 关闭屏幕，`jinfan` 打开屏幕
 
-# 构建指定 Ubuntu 版本的镜像
-sudo ./build.sh ubuntu-server 6.18 "" noble
+## 🔧 安装到设备
 
-# 构建 Ubuntu GNOME 镜像
-sudo ./build.sh ubuntu-gnome 6.18
+### 准备工作
+1. **解锁 Bootloader**：确保设备已解锁 Bootloader
+2. **安装工具**：安装 `fastboot` 和 `adb`
 
-# 构建指定版本的 Ubuntu GNOME 镜像
-sudo ./build.sh ubuntu-gnome 6.18 "" 24.04
-
-# 构建 Debian Phosh 镜像（指定桌面环境）
-sudo ./build.sh debian-phosh 6.18 phosh-full
-
-# 构建指定版本的 Debian Phosh 镜像
-sudo ./build.sh debian-phosh 6.18 phosh-full trixie
-```
-
-### 3. Docker 加速构建模式 ⚡
-
-使用 Docker 官方镜像可以显著加快构建速度：
-
-```bash
-# 使用 Docker 加速模式构建 Ubuntu Server 镜像
-sudo ./build.sh ubuntu-server 6.18 "" noble true
-
-# 使用 Docker 加速模式构建 Debian GNOME 镜像
-sudo ./build.sh debian-gnome 6.18 "" trixie true
-
-# 使用 Docker 加速模式构建 Ubuntu Phosh 镜像
-sudo ./build.sh ubuntu-phosh 6.18 phosh-full noble true
-```
-
-### 4. 构建产物
-
-构建完成后，会生成以下文件：
-
-- `rootfs.7z` - 压缩的根文件系统镜像
-- `rootfs.img` - 原始根文件系统镜像
-- `sha256sums.txt` - SHA256 校验和
-- `xiaomi-k20pro-boot.img` - Boot 分区镜像
-
-## GitHub Actions 自动构建
-
-本项目支持通过 GitHub Actions 自动构建：
-
-1. 进入项目的 GitHub 页面
-2. 点击 "Actions" 标签
-3. 选择 "构建系统镜像" 工作流
-4. 点击 "Run workflow" 按钮
-5. 选择系统类型、内核版本和桌面环境（仅 Phosh）
-6. **可选**：指定 Debian 版本或 Ubuntu 版本
-7. **可选**：启用 "使用 Docker 加速构建"
-8. 点击 "Run workflow" 开始构建
-
-构建完成后，镜像会自动发布到 GitHub Releases。
-
-## 系统配置
-
-### 默认用户名和密码
-
-- **root** - 密码：1234
-- **user** - 密码：1234
-
-### SSH 配置
-
-- 允许 root 登录
-- 允许密码认证
-
-### 网络配置
-
-- 使用 NetworkManager 管理网络
-- USB NCM 网络已配置（IP: 172.16.42.1）
-
-### 电源管理
-
-- 禁用系统休眠
-- 15秒后自动熄屏
-- 屏幕管理命令：
-  - `leijun` - 关闭屏幕
-  - `jinfan` - 开启屏幕
-
-## 桌面环境
-
-### GNOME
-- 自动登录用户 `user`
-- 包含基本 GNOME 应用
-
-### Phosh
-- 提供三种桌面环境选项：
-  - `phosh-core` - 核心组件
-  - `phosh-full` - 完整组件（推荐）
-  - `phosh-phone` - 包含电话功能
-
-## 设备特定配置
-
-- 已安装设备驱动和固件
-- 配置了 ALSA 音频
-- 支持 USB NCM 网络
-
-## 注意事项
-
-1. **构建速度**：
-   - 标准模式（debootstrap）：30-60 分钟
-   - Docker 加速模式：1-2 分钟 ⚡
-
-2. **磁盘空间**：构建过程需要较大的磁盘空间（至少 10GB）
-
-3. **网络连接**：
-   - 标准模式：需要稳定的网络连接
-   - Docker 模式：依赖 Docker 镜像拉取速度
-
-4. **Docker 要求**：使用 Docker 加速模式时，需要：
-   - 安装 Docker
-   - 启动 Docker 服务
-   - 当前用户加入 docker 组或使用 root 权限
-
-5. **镜像写入**：构建完成后，使用 `dd` 命令将镜像写入存储设备
+### 刷机步骤
 
 ```bash
-dd if=rootfs.img of=/dev/sdX bs=1M status=progress
+# 1. 进入 Fastboot 模式
+adb reboot bootloader
+
+# 2. 擦除分区
+fastboot erase dtbo
+fastboot erase boot
+fastboot erase cache
+fastboot erase userdata
+
+# 3. 刷入 boot 镜像
+fastboot flash cache xiaomi-k20pro-boot.img
+fastboot flash boot u-boot.img
+
+# 4. 刷入系统镜像（需要先解压 rootfs.7z）
+fastboot flash userdata rootfs.img
+
+# 5. 重启设备
+fastboot reboot
 ```
 
-## 故障排除
+## ❓ 常见问题解答 (FAQ)
 
-### 常见错误
+- [解决Windows下无法连接使用CDC NCM驱动](https://www.bilibili.com/video/BV1tW4y1A79V/)
 
-1. **依赖文件不存在**：请确保已下载内核包和 boot.img
-2. **权限错误**：确保以 root 权限运行构建脚本
-3. **网络错误**：检查网络连接和镜像源配置
-4. **磁盘空间不足**：确保有足够的磁盘空间
-5. **Docker 相关错误**：
-   - 确保 Docker 已安装并运行
-   - 确保当前用户有 Docker 访问权限
+- server版怎么连接网络？？？
+	- 1.OTG连接网线系统会自动识别
+	- 2.OTG连接键盘输入 `nmtui` 连接wifi
+	- 3.usb连接电脑安装好NCM驱动后输入 `nmtui` 连接wifi
 
-### 日志查看
+## 🙏 致谢
 
-构建过程中的详细日志会显示在终端中，便于排查问题。
-
-## 贡献
-
-欢迎提交 Issue 和 Pull Request 来改进这个项目！
-
-## 许可证
-
-本项目采用 MIT 许可证。
+- 感谢所有 Linux 内核开发者的辛勤工作
+- 感谢 Debian 和 Ubuntu 社区
+- 感谢 Phosh 桌面环境开发团队
+- 感谢所有贡献者和用户的支持
+- [@cuicanmx](https://github.com/ccmx200) - 提供帮助以及创新思路
+- [@map220v](https://github.com/map220v/ubuntu-xiaomi-nabu) - 原项目
+- [@Pc1598](https://github.com/Pc1598) - sm8150-mainline-raphael内核维护
+- [Aospa-raphael-unofficial/linux](https://github.com/Aospa-raphael-unofficial/linux) - 内核项目
+- [sm8150-mainline/linux](https://gitlab.com/sm8150-mainline/linux) - 内核项目
