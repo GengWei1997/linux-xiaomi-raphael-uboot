@@ -84,10 +84,18 @@ get_packages() {
         echo "$base_packages gnome gnome-terminal gdm3"
         ;;
       "phosh-core")
-        echo "$base_packages phosh phoc squeekboard"
+        if [[ "$system_type" == *"ubuntu-"* ]]; then
+          echo "$base_packages phosh phoc onboard"
+        elif [[ "$system_type" == *"debian-"* ]]; then
+          echo "$base_packages phosh phoc squeekboard"
+        fi
         ;;
       "phosh-full")
-        echo "$base_packages phosh phoc squeekboard gnome-settings-daemon gnome-control-center"
+        if [[ "$system_type" == *"ubuntu-"* ]]; then
+          echo "$base_packages phosh phoc onboard gnome-settings-daemon gnome-control-center"
+        elif [[ "$system_type" == *"debian-"* ]]; then
+          echo "$base_packages phosh phoc squeekboard gnome-settings-daemon gnome-control-center"
+        fi
         ;;
       "phosh-phone")
         echo "$base_packages phosh phoc squeekboard gnome-settings-daemon gnome-control-center ofono mobian-tweaks"

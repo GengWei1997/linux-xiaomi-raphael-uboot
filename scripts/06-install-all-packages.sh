@@ -39,10 +39,20 @@ if [[ "$SYSTEM_TYPE" != *"server"* ]]; then
             fi
             ;;
         "phosh-core")
-            DESKTOP_PACKAGES="phosh phoc squeekboard"
+            DESKTOP_PACKAGES="phosh phoc"
+            if [[ "$SYSTEM_TYPE" == *"ubuntu-"* ]]; then
+                DESKTOP_PACKAGES="$DESKTOP_PACKAGES onboard"
+            elif [[ "$SYSTEM_TYPE" == *"debian-"* ]]; then
+                DESKTOP_PACKAGES="$DESKTOP_PACKAGES squeekboard"
+            fi
             ;;
         "phosh-full")
-            DESKTOP_PACKAGES="phosh phoc squeekboard gnome-settings-daemon gnome-control-center"
+            DESKTOP_PACKAGES="phosh phoc gnome-settings-daemon gnome-control-center"
+            if [[ "$SYSTEM_TYPE" == *"ubuntu-"* ]]; then
+                DESKTOP_PACKAGES="$DESKTOP_PACKAGES onboard"
+            elif [[ "$SYSTEM_TYPE" == *"debian-"* ]]; then
+                DESKTOP_PACKAGES="$DESKTOP_PACKAGES squeekboard"
+            fi
             ;;
         "phosh-phone")
             DESKTOP_PACKAGES="phosh phoc squeekboard gnome-settings-daemon gnome-control-center ofono mobian-tweaks"
