@@ -62,13 +62,13 @@ fi
 echo "[$(date +'%Y-%m-%d %H:%M:%S')] [06]   └─ 开始安装（这可能需要几分钟...）"
 chroot rootdir apt-get install -y $ALL_PACKAGES
 
-# if [[ "$SYSTEM_TYPE" == *"debian-"* ]]; then
-#     echo "[$(date +'%Y-%m-%d %H:%M:%S')] [06]   └─ 修复 Debian dpkg 错误"
-#     chroot rootdir dpkg --remove --force-remove-reinstreq shim-signed 2>/dev/null || true
-#     chroot rootdir dpkg --purge shim-signed 2>/dev/null || true
-#     chroot rootdir dpkg --configure -a 2>/dev/null || true
-#     chroot rootdir apt-get -f install -y 2>/dev/null || true
-# fi
+if [[ "$SYSTEM_TYPE" == *"debian-"* ]]; then
+    echo "[$(date +'%Y-%m-%d %H:%M:%S')] [06]   └─ 修复 Debian dpkg 错误"
+    chroot rootdir dpkg --remove --force-remove-reinstreq shim-signed 2>/dev/null || true
+    chroot rootdir dpkg --purge shim-signed 2>/dev/null || true
+    chroot rootdir dpkg --configure -a 2>/dev/null || true
+    chroot rootdir apt-get -f install -y 2>/dev/null || true
+fi
 
 # 修改服务配置
 if [[ "$SYSTEM_TYPE" == *"debian-"* ]]; then

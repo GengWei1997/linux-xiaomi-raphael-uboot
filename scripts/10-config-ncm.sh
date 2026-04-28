@@ -65,4 +65,4 @@ EOF
 echo "[$(date +'%Y-%m-%d %H:%M:%S')] [10]   └─ 启用 usb-ncm 服务"
 chroot rootdir systemctl enable usb-ncm
 
-echo "[$(date +'%Y-%m-%d %H:%M:%S')] [10] �?USB NCM 配置完成"
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] [10] ✅ USB NCM 配置完成"
