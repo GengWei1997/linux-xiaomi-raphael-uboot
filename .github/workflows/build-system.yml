@@ -19,7 +19,7 @@ on:
           - ubuntu-server
           - ubuntu-gnome
           - ubuntu-phosh
-        default: 'ubuntu-server'
+        default: ''
       kernel_version:
         description: '内核版本号'
         required: true
