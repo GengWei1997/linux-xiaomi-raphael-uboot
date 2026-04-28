@@ -223,141 +223,128 @@ jobs:
             sha256sums.txt
           retention-days: 30
 
+      #######################################################################
+      # 创建 Release（已重写，彻底修复模板/转义问题）
+      #######################################################################
       - name: 创建 Release
         if: github.event_name == 'workflow_dispatch'
         id: create-release
         run: |
-          echo "正在创建 Release..."
-
-          # 计算 SHA256
+          # 提取 SHA256
           SHA256_ROOTFS=$(awk '{print $1}' sha256sums.txt | head -n1)
           SHA256_BOOT=$(awk '{print $1}' sha256sums.txt | tail -n1)
 
-          # 获取构建信息
           TIMESTAMP=$(TZ='Asia/Shanghai' date +'%Y-%m-%d %H:%M:%S')
 
-          if [[ "${{ env.SYSTEM_TYPE }}" == *"debian-"* ]]; then
+          # 确定操作系统名和版本
+          if [[ "$SYSTEM_TYPE" == *"debian-"* ]]; then
             OS_NAME="Debian"
-            OS_VERSION="${{ env.DEBIAN_VERSION }}"
+            OS_VERSION="$DEBIAN_VERSION"
           else
             OS_NAME="Ubuntu"
-            OS_VERSION="${{ env.UBUNTU_VERSION }}"
+            OS_VERSION="$UBUNTU_VERSION"
           fi
 
-          if [[ "${{ env.SYSTEM_TYPE }}" == *"server"* ]]; then
+          # 系统类别
+          if [[ "$SYSTEM_TYPE" == *"server"* ]]; then
             SYSTEM_CATEGORY="Server"
           else
             SYSTEM_CATEGORY="Desktop"
           fi
 
           # 生成 Tag
-          TAG="${{ env.SYSTEM_TYPE }}-v${{ env.KERNEL_VERSION }}-$OS_VERSION"
-          if [[ "${{ env.SYSTEM_TYPE }}" == *"phosh"* ]]; then
-            TAG="${TAG}-${{ env.DESKTOP_ENV }}"
+          TAG="${SYSTEM_TYPE}-v${KERNEL_VERSION}-${OS_VERSION}"
+          if [[ "$SYSTEM_TYPE" == *"phosh"* ]]; then
+            TAG="${TAG}-${DESKTOP_ENV}"
           fi
 
           # 生成 Release 名称
-          RELEASE_NAME="$OS_NAME $SYSTEM_CATEGORY 镜像 v${{ env.KERNEL_VERSION }} ($OS_VERSION)"
-          if [[ "${{ env.SYSTEM_TYPE }}" == *"phosh"* ]]; then
-            RELEASE_NAME="${RELEASE_NAME} - ${{ env.DESKTOP_ENV }}"
-          elif [[ "${{ env.SYSTEM_TYPE }}" == *"gnome"* ]]; then
+          RELEASE_NAME="${OS_NAME} ${SYSTEM_CATEGORY} 镜像 v${KERNEL_VERSION} (${OS_VERSION})"
+          if [[ "$SYSTEM_TYPE" == *"phosh"* ]]; then
+            RELEASE_NAME="${RELEASE_NAME} - ${DESKTOP_ENV}"
+          elif [[ "$SYSTEM_TYPE" == *"gnome"* ]]; then
             RELEASE_NAME="${RELEASE_NAME} - GNOME"
           fi
 
-          cat > release_description.md << 'EOF'
-## 小米 Raphael (K20 Pro) {{OS_NAME}} {{SYSTEM_CATEGORY}} 镜像
+          # 拼接 Markdown 描述（不使用外部模板和 sed）
+          DESCRIPTION="## 小米 Raphael (K20 Pro) ${OS_NAME} ${SYSTEM_CATEGORY} 镜像
 
-> 适用于小米 Raphael 设备的 {{OS_NAME}} {{SYSTEM_CATEGORY}} 系统镜像
+          > 适用于小米 Raphael 设备的 ${OS_NAME} ${SYSTEM_CATEGORY} 系统镜像
 
-### 📋 镜像信息
+          ### 📋 镜像信息
 
-| 属性 | 值 |
-|------|----|
-| 系统版本 | {{OS_NAME}} {{OS_VERSION}} |
-| 内核版本 | Linux {{KERNEL_VERSION}} |
-{{DESKTOP_ROW}}| 构建工具 | {{BOOTSTRAP_TOOL}} |
-| 构建时间 | {{TIMESTAMP}} |
-| 构建 ID | `{{RUN_ID}}-{{RUN_NUMBER}}` |
+          | 属性 | 值 |
+          |------|----|
+          | 系统版本 | ${OS_NAME} ${OS_VERSION} |
+          | 内核版本 | Linux ${KERNEL_VERSION} |"
 
-### 🔒 SHA256 校验和
-
-下载后请验证文件完整性：
-
-```
-rootfs.img:     {{SHA256_ROOTFS}}
-xiaomi-k20pro-boot.img: {{SHA256_BOOT}}
-```
-
-### 📦 包含组件
-
-- SSH 服务器（已启用密码登录）
-- 中文语言支持
-- NetworkManager 网络管理
-- 设备专用驱动和固件
-- USB NCM 网络共享（通过 USB 连接电脑上网）
-{{DESKTOP_ENV_LINE}}- 电源管理优化
-
-### 👤 默认用户
-
-| 用户 | 密码 |
-|------|------|
-| `user` | `1234` |
-| `root` | `1234` |
-
-### 🌐 USB NCM 网络共享
-
-通过 USB 连接电脑后，设备会自动创建虚拟网络接口：
-
-- **设备端 IP**: `172.16.42.1`
-- **电脑端 IP**: `172.16.42.2-254`（DHCP 自动分配）
-- **SSH 连接**: `ssh user@172.16.42.1`
-
-### ⚠️ 注意事项
-
-- 首次启动可能需要较长时间（约 1-2 分钟）
-- 建议首次登录后修改默认密码
-- 桌面版本首次启动可能需要配置显示
-
----
-*使用 GitHub Actions 自动构建*
-EOF
-
-          DESKTOP_ROW=""
-          if [[ "${{ env.SYSTEM_TYPE }}" == *"phosh"* ]]; then
-            DESKTOP_ROW="| 桌面环境 | ${{ env.DESKTOP_ENV }} |\n"
-          elif [[ "${{ env.SYSTEM_TYPE }}" == *"gnome"* ]]; then
-            DESKTOP_ROW="| 桌面环境 | GNOME |\n"
+          # 桌面环境行（仅当需要时添加）
+          if [[ "$SYSTEM_TYPE" == *"phosh"* ]]; then
+            DESCRIPTION+=$'\n| 桌面环境 | '"${DESKTOP_ENV} |"
+          elif [[ "$SYSTEM_TYPE" == *"gnome"* ]]; then
+            DESCRIPTION+=$'\n| 桌面环境 | GNOME |'
           fi
 
-          DESKTOP_ENV_LINE=""
-          if [[ "${{ env.SYSTEM_TYPE }}" != *"server"* ]]; then
-            if [[ "${{ env.SYSTEM_TYPE }}" == *"phosh"* ]]; then
-              DESKTOP_ENV_LINE="- ${{ env.DESKTOP_ENV }} 移动桌面环境\n"
+          DESCRIPTION+=$'\n| 构建工具 | '"${BOOTSTRAP_TOOL} |"
+          DESCRIPTION+=$'\n| 构建时间 | '"${TIMESTAMP} |"
+          DESCRIPTION+=$'\n| 构建 ID | `'"${GITHUB_RUN_ID}-${GITHUB_RUN_NUMBER}"'` |'
+
+          DESCRIPTION+=$'\n\n### 🔒 SHA256 校验和
+
+          下载后请验证文件完整性：
+          
+          DESCRIPTION+=$'\n\n### 📦 包含组件
+
+          - SSH 服务器（已启用密码登录）
+          - 中文语言支持
+          - NetworkManager 网络管理
+          - 设备专用驱动和固件
+          - USB NCM 网络共享（通过 USB 连接电脑上网）'
+
+          # 桌面相关组件
+          if [[ "$SYSTEM_TYPE" != *"server"* ]]; then
+            if [[ "$SYSTEM_TYPE" == *"phosh"* ]]; then
+              DESCRIPTION+=$'\n- '"${DESKTOP_ENV}"' 移动桌面环境'
             else
-              DESKTOP_ENV_LINE="- GNOME 桌面环境\n"
+              DESCRIPTION+=$'\n- GNOME 桌面环境'
             fi
           fi
 
-          sed -i "s/{{OS_NAME}}/$OS_NAME/g" release_description.md
-          sed -i "s/{{OS_VERSION}}/$OS_VERSION/g" release_description.md
-          sed -i "s/{{SYSTEM_CATEGORY}}/$SYSTEM_CATEGORY/g" release_description.md
-          sed -i "s/{{KERNEL_VERSION}}/${{ env.KERNEL_VERSION }}/g" release_description.md
-          sed -i "s/{{BOOTSTRAP_TOOL}}/${{ env.BOOTSTRAP_TOOL }}/g" release_description.md
-          sed -i "s/{{TIMESTAMP}}/$TIMESTAMP/g" release_description.md
-          sed -i "s/{{RUN_ID}}/${{ github.run_id }}/g" release_description.md
-          sed -i "s/{{RUN_NUMBER}}/${{ github.run_number }}/g" release_description.md
-          sed -i "s/{{SHA256_ROOTFS}}/$SHA256_ROOTFS/g" release_description.md
-          sed -i "s/{{SHA256_BOOT}}/$SHA256_BOOT/g" release_description.md
-          sed -i "s|{{DESKTOP_ROW}}|$DESKTOP_ROW|g" release_description.md
-          sed -i "s|{{DESKTOP_ENV_LINE}}|$DESKTOP_ENV_LINE|g" release_description.md
+          DESCRIPTION+=$'\n- 电源管理优化'
 
-          DESCRIPTION=$(cat release_description.md)
+          DESCRIPTION+=$'\n\n### 👤 默认用户
 
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
-          echo "name=$RELEASE_NAME" >> $GITHUB_OUTPUT
-          echo "description<<EOF" >> $GITHUB_OUTPUT
-          cat release_description.md >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          | 用户 | 密码 |
+          |------|------|
+          | `user` | `1234` |
+          | `root` | `1234` |
+
+          ### 🌐 USB NCM 网络共享
+
+          通过 USB 连接电脑后，设备会自动创建虚拟网络接口：
+
+          - **设备端 IP**: `172.16.42.1`
+          - **电脑端 IP**: `172.16.42.2-254`（DHCP 自动分配）
+          - **SSH 连接**: `ssh user@172.16.42.1`
+
+          ### ⚠️ 注意事项
+
+          - 首次启动可能需要较长时间（约 1-2 分钟）
+          - 建议首次登录后修改默认密码
+          - 桌面版本首次启动可能需要配置显示
+
+          ---
+
+          *使用 GitHub Actions 自动构建*'
+
+          # 将输出传递给下一步
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          echo "name=${RELEASE_NAME}" >> $GITHUB_OUTPUT
+          {
+            echo "description<<EOF"
+            echo "$DESCRIPTION"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
 
       - name: 发布 Release
         if: github.event_name == 'workflow_dispatch'
