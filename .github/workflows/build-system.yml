@@ -160,7 +160,7 @@ jobs:
 
   build:
     needs: generate-matrix
-    name: ${{ format('构建 {0} 镜像', matrix.system_type) }}
+    name: ${{ format('构建 {0}-{1}', matrix.system_type, matrix.kernel_version) }}
     runs-on: ubuntu-24.04-arm
     strategy:
       fail-fast: false
@@ -260,66 +260,185 @@ jobs:
 
           sudo BOOTSTRAP_TOOL="${{ env.BOOTSTRAP_TOOL }}" DEBIAN_VERSION="${{ env.DEBIAN_VERSION }}" UBUNTU_VERSION="${{ env.UBUNTU_VERSION }}" ./build.sh "${{ env.SYSTEM_TYPE }}" "${{ env.KERNEL_VERSION }}" "${{ env.DESKTOP_ENV }}" "${{ env.DEBIAN_VERSION || env.UBUNTU_VERSION }}"
 
-      - name: 生成SHA256校验和
+      - name: 生成产物文件名和校验和
+        id: artifacts
         run: |
-          SUFFIX="${{ env.SYSTEM_TYPE }}-${{ env.KERNEL_VERSION }}-${{ env.DEBIAN_VERSION || env.UBUNTU_VERSION }}"
-          echo "生成校验和... ($SUFFIX)"
-          sha256sum rootfs.img xiaomi-k20pro-boot.img > sha256sums-${SUFFIX}.txt
-          cat sha256sums-${SUFFIX}.txt
+          # 构建产物标识名
+          OS_VER="${{ env.DEBIAN_VERSION || env.UBUNTU_VERSION }}"
+          FILENAME="rootfs-${{ env.SYSTEM_TYPE }}-${{ env.KERNEL_VERSION }}-${OS_VER}"
+          [[ "${{ env.SYSTEM_TYPE }}" == *"phosh"* ]] && FILENAME="${FILENAME}-${{ env.DESKTOP_ENV }}"
+          
+          echo "filename=${FILENAME}" >> $GITHUB_OUTPUT
+          echo "artifact_name=${FILENAME}" >> $GITHUB_OUTPUT
+          
+          # 生成校验和文件
+          sha256sum rootfs.img xiaomi-k20pro-boot.img > ${FILENAME}.sha256
+          cat ${FILENAME}.sha256
+          
+          # 记录文件大小
+          ROOTFS_SIZE=$(stat -c%s rootfs.img)
+          echo "rootfs_size=${ROOTFS_SIZE}" >> $GITHUB_OUTPUT
 
       - name: 压缩镜像
         run: |
-          7z a rootfs.7z rootfs.img xiaomi-k20pro-boot.img
+          FILENAME="${{ steps.artifacts.outputs.filename }}"
+          echo "压缩为 ${FILENAME}.7z ..."
+          7z a "${FILENAME}.7z" rootfs.img xiaomi-k20pro-boot.img
+          ls -lh "${FILENAME}.7z"
 
-      - name: 准备 Release 变量
-        if: github.event_name == 'workflow_dispatch'
-        id: create-release
+      - name: 上传产物到 Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.artifacts.outputs.artifact_name }}
+          path: |
+            ${{ steps.artifacts.outputs.filename }}.7z
+            ${{ steps.artifacts.outputs.filename }}.sha256
+          retention-days: 7
+
+      - name: 清理临时文件
+        if: always()
         run: |
-          # 1. 提取校验和
-          SHA256_ROOTFS=$(awk 'NR==1 {print $1}' sha256sums.txt)
-          SHA256_BOOT=$(awk 'NR==2 {print $1}' sha256sums.txt)
+          sudo rm -f alsa-xiaomi-raphael.deb 2>/dev/null || true
+          sudo rm -rf rootdir 2>/dev/null || true
+          rm -rf xiaomi-raphael-debs_* 2>/dev/null || true
+          rm -f rootfs.img xiaomi-k20pro-boot.img 2>/dev/null || true
+
+  release:
+    needs: build
+    if: github.event_name == 'workflow_dispatch'
+    name: 发布统一 Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: 下载所有产物
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: rootfs-*
+          merge-multiple: false
+
+      - name: 准备 Release 信息
+        id: release-info
+        run: |
           TIMESTAMP=$(TZ='Asia/Shanghai' date +'%Y-%m-%d %H:%M:%S')
-
-          # 2. 确定系统元数据
-          [[ "${{ env.SYSTEM_TYPE }}" == *"debian-"* ]] && OS_NAME="Debian" || OS_NAME="Ubuntu"
-          [[ "${{ env.SYSTEM_TYPE }}" == *"server"* ]] && CATEGORY="Server" || CATEGORY="Desktop"
-          [[ "${{ env.SYSTEM_TYPE }}" == *"debian-"* ]] && OS_VERSION="${{ env.DEBIAN_VERSION }}" || OS_VERSION="${{ env.UBUNTU_VERSION }}"
+          RUN_DATE=$(date +'%Y%m%d')
           
-          # 3. 构造 Release 标题和标签
-          # 标签: 系统类型-内核-系统版本[-桌面环境]
-          TAG="${{ env.SYSTEM_TYPE }}-v${{ env.KERNEL_VERSION }}-${OS_VERSION}"
-          [[ "${{ env.SYSTEM_TYPE }}" == *"phosh"* ]] && TAG="${TAG}-${{ env.DESKTOP_ENV }}"
+          # 统一标签和标题
+          TAG="build-${RUN_DATE}-${GITHUB_RUN_ID}"
+          RELEASE_TITLE="小米 Raphael 镜像构建 ${RUN_DATE}"
           
-          # 标题: 更加直观的展示
-          RELEASE_TITLE="${OS_NAME} ${CATEGORY} 镜像 v${{ env.KERNEL_VERSION }} (${OS_VERSION})"
-          if [[ "${{ env.SYSTEM_TYPE }}" == *"phosh"* ]]; then
-            RELEASE_TITLE="${RELEASE_TITLE} - ${{ env.DESKTOP_ENV }}"
-          elif [[ "${{ env.SYSTEM_TYPE }}" == *"gnome"* ]]; then
-            RELEASE_TITLE="${RELEASE_TITLE} - GNOME"
-          fi
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          echo "name=${RELEASE_TITLE}" >> $GITHUB_OUTPUT
+          echo "timestamp=${TIMESTAMP}" >> $GITHUB_OUTPUT
 
-          # 4. 直接利用 Heredoc 生成描述内容 (无需 sed)
+      - name: 生成 Release 描述和分类文件
+        id: classify
+        run: |
+          TIMESTAMP="${{ steps.release-info.outputs.timestamp }}"
+          ARTIFACTS_DIR="artifacts"
+          
+          # 初始化数组
+          RELEASE_FILES=""
+          LARGE_FILES=""
+          FILE_LIST=""
+          
+          # GitHub Release 单个文件大小限制：2GB = 2147483648 字节
+          SIZE_LIMIT=2147483648
+          
+          # 遍历所有产物
+          for artifact_dir in ${ARTIFACTS_DIR}/rootfs-*/; do
+            [ -d "$artifact_dir" ] || continue
+            
+            for file in "${artifact_dir}"*.7z; do
+              [ -f "$file" ] || continue
+              
+              filename=$(basename "$file")
+              filesize=$(stat -c%s "$file")
+              
+              # 解析文件名信息
+              # 格式: rootfs-{system_type}-{kernel_version}-{os_version}[-{desktop_env}].7z
+              IFS='-' read -ra PARTS <<< "${filename%.7z}"
+              SYSTEM_TYPE="${PARTS[1]}"
+              KERNEL_VER="${PARTS[2]}"
+              OS_VER="${PARTS[3]}"
+              
+              # 获取校验和
+              shafile="${file%.7z}.sha256"
+              if [ -f "$shafile" ]; then
+                SHA256=$(awk 'NR==1 {print $1}' "$shafile")
+              else
+                SHA256=$(sha256sum "$file" | awk '{print $1}')
+              fi
+              
+              # 构建文件信息行
+              FILE_INFO="| ${filename} | ${SYSTEM_TYPE} | ${KERNEL_VER} | ${OS_VER} |"
+              
+              if [ "$filesize" -gt "$SIZE_LIMIT" ]; then
+                # 大文件：不加入 Release，保留在 Artifacts
+                LARGE_FILES="${LARGE_FILES}
+          - ${filename} (${filesize} bytes)"
+                FILE_LIST="${FILE_LIST}
+          - ⚠️ **${filename}** (文件过大，请从 Artifacts 下载)"
+              else
+                # 小文件：加入 Release
+                RELEASE_FILES="${RELEASE_FILES}${file} "
+                FILE_LIST="${FILE_LIST}
+          - ✅ **${filename}**"
+              fi
+              
+              # 收集校验和信息
+              SHA256_LIST="${SHA256_LIST}
+          ${filename}: ${SHA256}"
+            done
+          done
+          
+          # 输出到 GITHUB_OUTPUT
+          echo "release_files=${RELEASE_FILES}" >> $GITHUB_OUTPUT
           {
-            echo "description<<EOF"
-            echo "## 小米 Raphael (K20 Pro) ${OS_NAME} 镜像"
+            echo "large_files<<EOF"
+            echo "$LARGE_FILES"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+          {
+            echo "file_list<<EOF"
+            echo "$FILE_LIST"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+          {
+            echo "sha256_list<<EOF"
+            echo "$SHA256_LIST"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
+      - name: 创建 Release 描述
+        id: description
+        run: |
+          TIMESTAMP="${{ steps.release-info.outputs.timestamp }}"
+          FILE_LIST="${{ steps.classify.outputs.file_list }}"
+          LARGE_FILES="${{ steps.classify.outputs.large_files }}"
+          SHA256_LIST="${{ steps.classify.outputs.sha256_list }}"
+          
+          {
+            echo "body<<EOF"
+            echo "## 小米 Raphael (K20 Pro) 系统镜像集合"
             echo ""
-            echo "> 适用于小米 Raphael (K20 Pro/Mi 9T Pro) 的 ${OS_NAME} ${CATEGORY} 自动构建版本"
+            echo "> 自动构建版本 - ${TIMESTAMP}"
             echo ""
-            echo "### 📊 镜像信息"
-            echo "| 属性 | 值 |"
-            echo "|------|----|"
-            echo "| 系统版本 | ${OS_NAME} ${OS_VERSION} |"
-            echo "| 内核版本 | Linux ${{ env.KERNEL_VERSION }} |"
-            echo "| 构建工具 | ${{ env.BOOTSTRAP_TOOL }} |"
-            echo "| 构建时间 | ${TIMESTAMP} |"
-            echo "| 构建 ID | ${GITHUB_RUN_ID} |"
+            echo "### 📦 镜像列表"
+            echo "| 文件名 | 系统类型 | 内核版本 | 系统版本 |"
+            echo "|--------|----------|----------|----------|"
+            echo "$FILE_LIST"
             echo ""
-            echo "### 🔒 SHA256 校验"
+            echo "### 🔒 SHA256 校验和"
             echo "\`\`\`"
-            echo "rootfs.img: ${SHA256_ROOTFS}"
-            echo "boot.img:   ${SHA256_BOOT}"
+            echo "$SHA256_LIST"
             echo "\`\`\`"
             echo ""
+            if [ -n "$LARGE_FILES" ]; then
+              echo "### ⚠️ 大文件提示"
+              echo "以下文件超过 2GB，未上传到 Release，请从 Artifacts 下载："
+              echo "$LARGE_FILES"
+              echo ""
+            fi
             echo "### 🔑 默认凭据"
             echo "- **用户**: \`user\` / **密码**: \`1234\`"
             echo "- **用户**: \`root\` / **密码**: \`1234\`"
@@ -333,28 +452,14 @@ jobs:
             echo "EOF"
           } >> $GITHUB_OUTPUT
 
-          echo "tag=${TAG}" >> $GITHUB_OUTPUT
-          echo "name=${RELEASE_TITLE}" >> $GITHUB_OUTPUT
-
       - name: 发布 Release
-        if: github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.create-release.outputs.tag }}
-          name: ${{ steps.create-release.outputs.name }}
-          body: ${{ steps.create-release.outputs.description }}
+          tag_name: ${{ steps.release-info.outputs.tag }}
+          name: ${{ steps.release-info.outputs.name }}
+          body: ${{ steps.description.outputs.body }}
           draft: false
           prerelease: false
-          files: |
-            rootfs.7z
+          files: ${{ steps.classify.outputs.release_files }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: 清理临时文件
-        if: always()
-        run: |
-          SUFFIX="${{ env.SYSTEM_TYPE }}-${{ env.KERNEL_VERSION }}-${{ env.DEBIAN_VERSION || env.UBUNTU_VERSION }}"
-          sudo rm -f alsa-xiaomi-raphael.deb 2>/dev/null || true
-          sudo rm -rf rootdir 2>/dev/null || true
-          rm -rf xiaomi-raphael-debs_* 2>/dev/null || true
-          rm -f sha256sums-${SUFFIX}.txt 2>/dev/null || true
