@@ -24,6 +24,7 @@ if [ "$BOOTSTRAP_TOOL" = "mmdebstrap" ]; then
     if [[ "$SYSTEM_TYPE" == *"debian-"* ]]; then
         mmdebstrap \
             --arch=arm64 \
+            --skip=checkvalidpgp \
             --include=ca-certificates,debian-archive-keyring,gpgv,systemd,iptables,dnsmasq,iproute2 \
             --components=main,contrib,non-free,non-free-firmware \
             "$OS_VERSION" \
