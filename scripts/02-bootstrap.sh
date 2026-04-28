@@ -21,10 +21,10 @@ fi
 
 if [ "$BOOTSTRAP_TOOL" = "mmdebstrap" ]; then
     # 使用 mmdebstrap
-    mmdebstrap --variant=minbase $OS_VERSION rootdir
+    mmdebstrap $OS_VERSION rootdir
 elif [ "$BOOTSTRAP_TOOL" = "debootstrap" ]; then
     # 使用 debootstrap
-    debootstrap --variant=minbase --arch=arm64 $OS_VERSION rootdir $MIRROR
+    debootstrap $OS_VERSION rootdir $MIRROR
 else
     echo "错误: 不支持的构建工具: $BOOTSTRAP_TOOL"
     exit 1

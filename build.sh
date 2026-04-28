@@ -68,7 +68,12 @@ echo "镜像大小: $IMAGE_SIZE 💾"
 if [ "$IS_DESKTOP" = "true" ]; then
     echo "桌面环境: $DESKTOP_ENV 🎨"
 fi
-    echo "构建模式: 标准模式 (debootstrap) 🛠️"
+BOOTSTRAP_TOOL="${BOOTSTRAP_TOOL:-mmdebstrap}"
+if [ "$BOOTSTRAP_TOOL" = "debootstrap" ]; then
+    echo "构建模式: debootstrap 🛠️"
+else
+    echo "构建模式: mmdebstrap 📦"
+fi
 echo "========================================== 🎉"
 
 # 检查必要文件
