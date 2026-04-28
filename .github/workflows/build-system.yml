@@ -103,21 +103,25 @@ jobs:
 
       - name: 安装构建工具
         run: |
+          echo "[$(date +'%Y-%m-%d %H:%M:%S')] 🛠️ 检查并安装构建工具: ${{ env.BOOTSTRAP_TOOL }}"
+          
           if [ "${{ env.BOOTSTRAP_TOOL }}" = "mmdebstrap" ]; then
             if ! command -v mmdebstrap &> /dev/null; then
-              echo "安装 mmdebstrap..."
+              echo "[$(date +'%Y-%m-%d %H:%M:%S')]   └─ 安装 mmdebstrap 和依赖..."
               sudo apt update
-              sudo apt install -y mmdebstrap debian-archive-keyring
+              sudo apt install -y mmdebstrap debian-archive-keyring ubuntu-archive-keyring
+              echo "[$(date +'%Y-%m-%d %H:%M:%S')]   └─ mmdebstrap 安装完成 ✅"
             else
-              echo "mmdebstrap 已安装，跳过"
+              echo "[$(date +'%Y-%m-%d %H:%M:%S')]   └─ mmdebstrap 已安装，跳过"
             fi
           else
             if ! command -v debootstrap &> /dev/null; then
-              echo "安装 debootstrap..."
+              echo "[$(date +'%Y-%m-%d %H:%M:%S')]   └─ 安装 debootstrap..."
               sudo apt update
-              sudo apt install -y debootstrap debian-archive-keyring
+              sudo apt install -y debootstrap
+              echo "[$(date +'%Y-%m-%d %H:%M:%S')]   └─ debootstrap 安装完成 ✅"
             else
-              echo "debootstrap 已安装，跳过"
+              echo "[$(date +'%Y-%m-%d %H:%M:%S')]   └─ debootstrap 已安装，跳过"
             fi
           fi
 
@@ -335,6 +339,7 @@ jobs:
           prerelease: false
           files: |
             rootfs.7z
+            xiaomi-k20pro-boot.img
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

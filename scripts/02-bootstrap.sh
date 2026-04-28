@@ -21,7 +21,7 @@ fi
 
 echo "[$(date +'%Y-%m-%d %H:%M:%S')] [02]   └─ 开始 bootstrap (这可能需要几分钟...)"
 if [ "$BOOTSTRAP_TOOL" = "mmdebstrap" ]; then
-    mmdebstrap --skip=checkvalidpgp $OS_VERSION rootdir
+    mmdebstrap $OS_VERSION rootdir
 elif [ "$BOOTSTRAP_TOOL" = "debootstrap" ]; then
     debootstrap $OS_VERSION rootdir $MIRROR
 else
