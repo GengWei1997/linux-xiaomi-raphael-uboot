@@ -240,7 +240,7 @@ jobs:
           [[ "${{ env.SYSTEM_TYPE }}" == *"phosh"* ]] && TAG="${TAG}-${{ env.DESKTOP_ENV }}"
           
           # 标题: 更加直观的展示
-          RELEASE_TITLE="${OS_NAME} ${CATEGORY} v${{ env.KERNEL_VERSION }} (${OS_VERSION})"
+          RELEASE_TITLE="${OS_NAME} ${CATEGORY} 镜像 v${{ env.KERNEL_VERSION }} (${OS_VERSION})"
           if [[ "${{ env.SYSTEM_TYPE }}" == *"phosh"* ]]; then
             RELEASE_TITLE="${RELEASE_TITLE} - ${{ env.DESKTOP_ENV }}"
           elif [[ "${{ env.SYSTEM_TYPE }}" == *"gnome"* ]]; then
