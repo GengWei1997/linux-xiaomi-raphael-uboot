@@ -75,6 +75,10 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.generate.outputs.matrix }}
+      build_mode: ${{ steps.generate.outputs.build_mode }}
+      single_system_type: ${{ steps.generate.outputs.single_system_type }}
+      single_kernel_version: ${{ steps.generate.outputs.single_kernel_version }}
+      single_os_version: ${{ steps.generate.outputs.single_os_version }}
     steps:
       - name: 生成构建矩阵
         id: generate
@@ -82,6 +86,7 @@ jobs:
           set -e
           
           BUILD_MODE="${{ github.event.inputs.build_mode }}"
+          echo "build_mode=${BUILD_MODE}" >> $GITHUB_OUTPUT
           SYS_TYPES="${{ github.event.inputs.system_types }}"
           KERN_VERS="${{ github.event.inputs.kernel_versions }}"
           BOOT_TOOLS="${{ github.event.inputs.bootstrap_tools }}"
@@ -98,10 +103,17 @@ jobs:
             if [[ "$SYS_TYPE" == debian-* ]]; then
               DEB_VER=$(echo "$DEB_VERS" | cut -d',' -f1)
               UBU_VER=""
+              OS_VER="$DEB_VER"
             else
               DEB_VER=""
               UBU_VER=$(echo "$UBU_VERS" | cut -d',' -f1)
+              OS_VER="$UBU_VER"
             fi
+            
+            # 输出单个构建的信息供 release job 使用
+            echo "single_system_type=${SYS_TYPE}" >> $GITHUB_OUTPUT
+            echo "single_kernel_version=${KERN_VER}" >> $GITHUB_OUTPUT
+            echo "single_os_version=${OS_VER}" >> $GITHUB_OUTPUT
             
             MATRIX="[{"system_type":"$SYS_TYPE","kernel_version":"$KERN_VER","bootstrap_tool":"$TOOL","debian_version":"$DEB_VER","ubuntu_version":"$UBU_VER","desktop_env":"$DESKTOP_ENV"}]"
           else
@@ -304,7 +316,7 @@ jobs:
           rm -f rootfs.img xiaomi-k20pro-boot.img 2>/dev/null || true
 
   release:
-    needs: build
+    needs: [generate-matrix, build]
     if: github.event_name == 'workflow_dispatch'
     name: 发布统一 Release
     runs-on: ubuntu-latest
@@ -321,10 +333,28 @@ jobs:
         run: |
           TIMESTAMP=$(TZ='Asia/Shanghai' date +'%Y-%m-%d %H:%M:%S')
           RUN_DATE=$(date +'%Y%m%d')
+          BUILD_MODE="${{ needs.generate-matrix.outputs.build_mode }}"
           
-          # 统一标签和标题
-          TAG="build-${RUN_DATE}-${GITHUB_RUN_ID}"
-          RELEASE_TITLE="小米 Raphael 镜像构建 ${RUN_DATE}"
+          if [ "$BUILD_MODE" = "single" ]; then
+            # 单个构建：使用详细的标签
+            SYS_TYPE="${{ needs.generate-matrix.outputs.single_system_type }}"
+            KERN_VER="${{ needs.generate-matrix.outputs.single_kernel_version }}"
+            OS_VER="${{ needs.generate-matrix.outputs.single_os_version }}"
+            
+            # 确定系统名称
+            if [[ "$SYS_TYPE" == debian-* ]]; then
+              OS_NAME="Debian"
+            else
+              OS_NAME="Ubuntu"
+            fi
+            
+            TAG="${SYS_TYPE}-v${KERN_VER}-${OS_VER}-${RUN_DATE}"
+            RELEASE_TITLE="${OS_NAME} ${SYS_TYPE#*-} 镜像 v${KERN_VER} (${OS_VER}) ${RUN_DATE}"
+          else
+            # 批量构建：使用统一的标签
+            TAG="build-${RUN_DATE}-${GITHUB_RUN_ID}"
+            RELEASE_TITLE="小米 Raphael 镜像构建 ${RUN_DATE}"
+          fi
           
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
           echo "name=${RELEASE_TITLE}" >> $GITHUB_OUTPUT
