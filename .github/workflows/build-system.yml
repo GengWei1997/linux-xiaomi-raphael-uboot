@@ -339,7 +339,6 @@ jobs:
           prerelease: false
           files: |
             rootfs.7z
-            xiaomi-k20pro-boot.img
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
