@@ -232,7 +232,7 @@ jobs:
           # 2. 确定系统元数据
           [[ "${{ env.SYSTEM_TYPE }}" == *"debian-"* ]] && OS_NAME="Debian" || OS_NAME="Ubuntu"
           [[ "${{ env.SYSTEM_TYPE }}" == *"server"* ]] && CATEGORY="Server" || CATEGORY="Desktop"
-          OS_VERSION="${{ env.DEBIAN_VERSION || env.UBUNTU_VERSION }}"
+          [[ "${{ env.SYSTEM_TYPE }}" == *"debian-"* ]] && OS_VERSION="${{ env.DEBIAN_VERSION }}" || OS_VERSION="${{ env.UBUNTU_VERSION }}"
           
           # 3. 构造 Release 标题和标签
           # 标签: 系统类型-内核-系统版本[-桌面环境]
