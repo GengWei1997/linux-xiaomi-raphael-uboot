@@ -107,7 +107,7 @@ jobs:
             if ! command -v mmdebstrap &> /dev/null; then
               echo "安装 mmdebstrap..."
               sudo apt update
-              sudo apt install -y mmdebstrap
+              sudo apt install -y mmdebstrap debian-archive-keyring
             else
               echo "mmdebstrap 已安装，跳过"
             fi
@@ -115,7 +115,7 @@ jobs:
             if ! command -v debootstrap &> /dev/null; then
               echo "安装 debootstrap..."
               sudo apt update
-              sudo apt install -y debootstrap
+              sudo apt install -y debootstrap debian-archive-keyring
             else
               echo "debootstrap 已安装，跳过"
             fi
