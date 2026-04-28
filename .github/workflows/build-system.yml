@@ -86,15 +86,45 @@ permissions:
 
 jobs:
   build:
-    name: 构建镜像
+    name: 构建 ${{ matrix.system_type }} 镜像
     runs-on: ubuntu-24.04-arm
+    strategy:
+      matrix:
+        system_type: [debian-server, debian-gnome, debian-phosh, ubuntu-server, ubuntu-gnome, ubuntu-phosh]
+        kernel_version: ['6.18', '7.0']
+        bootstrap_tool: [mmdebstrap]
+        include:
+          - system_type: debian-server
+            debian_version: trixie
+            ubuntu_version: ''
+            desktop_env: ''
+          - system_type: debian-gnome
+            debian_version: trixie
+            ubuntu_version: ''
+            desktop_env: ''
+          - system_type: debian-phosh
+            debian_version: trixie
+            ubuntu_version: ''
+            desktop_env: phosh-full
+          - system_type: ubuntu-server
+            debian_version: ''
+            ubuntu_version: resolute
+            desktop_env: ''
+          - system_type: ubuntu-gnome
+            debian_version: ''
+            ubuntu_version: resolute
+            desktop_env: ''
+          - system_type: ubuntu-phosh
+            debian_version: ''
+            ubuntu_version: resolute
+            desktop_env: phosh-full
     env:
-      SYSTEM_TYPE: ${{ github.event.inputs.system_type || 'ubuntu-server' }}
-      KERNEL_VERSION: ${{ github.event.inputs.kernel_version || '6.18' }}
-      BOOTSTRAP_TOOL: ${{ github.event.inputs.bootstrap_tool || 'mmdebstrap' }}
-      DESKTOP_ENV: ${{ github.event.inputs.desktop_environment || 'phosh-full' }}
-      DEBIAN_VERSION: ${{ github.event.inputs.debian_version || 'trixie' }}
-      UBUNTU_VERSION: ${{ github.event.inputs.ubuntu_version || 'resolute' }}
+      SYSTEM_TYPE: ${{ matrix.system_type }}
+      KERNEL_VERSION: ${{ matrix.kernel_version }}
+      BOOTSTRAP_TOOL: ${{ matrix.bootstrap_tool }}
+      DESKTOP_ENV: ${{ matrix.desktop_env }}
+      DEBIAN_VERSION: ${{ matrix.debian_version }}
+      UBUNTU_VERSION: ${{ matrix.ubuntu_version }}
       KERNEL_REPO: ${{ github.event.inputs.kernel_repository || 'GengWei1997/linux-xiaomi-raphael-uboot' }}
 
     steps:
@@ -180,45 +210,18 @@ jobs:
 
           chmod +x build.sh
 
-          if [[ "${{ env.SYSTEM_TYPE }}" == *"phosh"* ]]; then
-            if [[ "${{ env.SYSTEM_TYPE }}" == *"debian-"* ]]; then
-              sudo BOOTSTRAP_TOOL="${{ env.BOOTSTRAP_TOOL }}" DEBIAN_VERSION="${{ env.DEBIAN_VERSION }}" ./build.sh "${{ env.SYSTEM_TYPE }}" "${{ env.KERNEL_VERSION }}" "${{ env.DESKTOP_ENV }}" "${{ env.DEBIAN_VERSION }}"
-            else
-              sudo BOOTSTRAP_TOOL="${{ env.BOOTSTRAP_TOOL }}" UBUNTU_VERSION="${{ env.UBUNTU_VERSION }}" ./build.sh "${{ env.SYSTEM_TYPE }}" "${{ env.KERNEL_VERSION }}" "${{ env.DESKTOP_ENV }}" "${{ env.UBUNTU_VERSION }}"
-            fi
-          else
-            if [[ "${{ env.SYSTEM_TYPE }}" == *"debian-"* ]]; then
-              sudo BOOTSTRAP_TOOL="${{ env.BOOTSTRAP_TOOL }}" DEBIAN_VERSION="${{ env.DEBIAN_VERSION }}" ./build.sh "${{ env.SYSTEM_TYPE }}" "${{ env.KERNEL_VERSION }}" "" "${{ env.DEBIAN_VERSION }}"
-            else
-              sudo BOOTSTRAP_TOOL="${{ env.BOOTSTRAP_TOOL }}" UBUNTU_VERSION="${{ env.UBUNTU_VERSION }}" ./build.sh "${{ env.SYSTEM_TYPE }}" "${{ env.KERNEL_VERSION }}" "" "${{ env.UBUNTU_VERSION }}"
-            fi
-          fi
-
-      - name: 设置 artifact 名称
-        id: set-artifact-name
-        run: |
-          ARTIFACT_NAME="${{ env.SYSTEM_TYPE }}-rootfs-${{ env.KERNEL_VERSION }}-${{ env.DEBIAN_VERSION || env.UBUNTU_VERSION }}"
-          echo "artifact_name=$ARTIFACT_NAME" >> $GITHUB_OUTPUT
-          echo "Artifact 名称: $ARTIFACT_NAME"
+          sudo BOOTSTRAP_TOOL="${{ env.BOOTSTRAP_TOOL }}" DEBIAN_VERSION="${{ env.DEBIAN_VERSION }}" UBUNTU_VERSION="${{ env.UBUNTU_VERSION }}" ./build.sh "${{ env.SYSTEM_TYPE }}" "${{ env.KERNEL_VERSION }}" "${{ env.DESKTOP_ENV }}" "${{ env.DEBIAN_VERSION || env.UBUNTU_VERSION }}"
 
       - name: 生成SHA256校验和
         run: |
-          echo "生成校验和..."
-          sha256sum rootfs.img xiaomi-k20pro-boot.img > sha256sums.txt
-          cat sha256sums.txt
+          SUFFIX="${{ matrix.system_type }}-${{ matrix.kernel_version }}-${{ matrix.debian_version || matrix.ubuntu_version }}"
+          echo "生成校验和... ($SUFFIX)"
+          sha256sum rootfs.img xiaomi-k20pro-boot.img > sha256sums-${SUFFIX}.txt
+          cat sha256sums-${SUFFIX}.txt
 
       - name: 压缩镜像
         run: |
           7z a rootfs.7z rootfs.img xiaomi-k20pro-boot.img
-
-      - name: 上传镜像
-        uses: actions/upload-artifact@v5
-        with:
-          name: ${{ steps.set-artifact-name.outputs.artifact_name }}
-          path: |
-            rootfs.7z
-            sha256sums.txt
-          retention-days: 30
 
       - name: 准备 Release 变量
         if: github.event_name == 'workflow_dispatch'
@@ -263,7 +266,7 @@ jobs:
             echo "| 构建时间 | ${TIMESTAMP} |"
             echo "| 构建 ID | ${GITHUB_RUN_ID} |"
             echo ""
-            echo "### 🔒 SHA256 校验和"
+            echo "### 🔒 SHA256 校验"
             echo "\`\`\`"
             echo "rootfs.img: ${SHA256_ROOTFS}"
             echo "boot.img:   ${SHA256_BOOT}"

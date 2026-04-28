@@ -55,17 +55,17 @@ cat rootdir/etc/netplan/01-network-manager-all.yaml 2>/dev/null || echo "(文件
 
 echo ""
 echo "[/etc/systemd/system/usb-ncm.service]"
-cat rootdir/etc/systemd/system/usb-ncm.service 2>/dev/null || echo "(文件不存�?"
+cat rootdir/etc/systemd/system/usb-ncm.service 2>/dev/null || echo "(文件不存在)"
 
 echo ""
 echo "[/etc/dnsmasq.d/usb-ncm.conf]"
-cat rootdir/etc/dnsmasq.d/usb-ncm.conf 2>/dev/null || echo "(文件不存�?"
+cat rootdir/etc/dnsmasq.d/usb-ncm.conf 2>/dev/null || echo "(文件不存在)"
 
 echo ""
 echo "[/etc/fstab]"
-cat rootdir/etc/fstab 2>/dev/null || echo "(文件不存�?"
+cat rootdir/etc/fstab 2>/dev/null || echo "(文件不存在)"
 
 echo ""
 echo "========================================== 📋 配置文件预览结束 =========================================="
 
-echo "[$(date +'%Y-%m-%d %H:%M:%S')] [14] �?清理完成"
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] [14] ✅ 清理完成"
