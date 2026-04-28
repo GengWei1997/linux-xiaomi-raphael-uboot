@@ -53,104 +53,61 @@ export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH"
 export DEBIAN_FRONTEND="noninteractive"
 export SYSTEM_TYPE
 
-# 显示构建信息
-echo "========================================== 🎉"
-echo "系统镜像构建脚本"
-echo "========================================== 🎉"
-echo "系统类型: $SYSTEM_TYPE 🖥️"
-echo "内核版本: $KERNEL_VERSION 🧠"
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] ========================================== 🎉"
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] 系统镜像构建脚本"
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] ========================================== 🎉"
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] 系统类型:      $SYSTEM_TYPE 🖥️"
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] 内核版本:      $KERNEL_VERSION 🧠"
 if [ -n "$DEBIAN_VERSION" ]; then
-    echo "Debian 版本: $DEBIAN_VERSION 🐧"
+    echo "[$(date +'%Y-%m-%d %H:%M:%S')] Debian 版本:   $DEBIAN_VERSION 🐧"
 elif [ -n "$UBUNTU_VERSION" ]; then
-    echo "Ubuntu 版本: $UBUNTU_VERSION 🦁"
+    echo "[$(date +'%Y-%m-%d %H:%M:%S')] Ubuntu 版本:   $UBUNTU_VERSION 🦁"
 fi
-echo "镜像大小: $IMAGE_SIZE 💾"
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] 镜像大小:      $IMAGE_SIZE 💾"
 if [ "$IS_DESKTOP" = "true" ]; then
-    echo "桌面环境: $DESKTOP_ENV 🎨"
+    echo "[$(date +'%Y-%m-%d %H:%M:%S')] 桌面环境:      $DESKTOP_ENV 🎨"
 fi
 BOOTSTRAP_TOOL="${BOOTSTRAP_TOOL:-mmdebstrap}"
 if [ "$BOOTSTRAP_TOOL" = "debootstrap" ]; then
-    echo "构建模式: debootstrap 🛠️"
+    echo "[$(date +'%Y-%m-%d %H:%M:%S')] 构建模式:      debootstrap 🛠️"
 else
-    echo "构建模式: mmdebstrap 📦"
+    echo "[$(date +'%Y-%m-%d %H:%M:%S')] 构建模式:      mmdebstrap 📦"
 fi
-echo "========================================== 🎉"
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] ========================================== 🎉"
 
-# 检查必要文件
 if [ ! -f "$BOOT_IMG" ]; then
-    echo "错误: $BOOT_IMG 不存在 ❌"
+    echo "[$(date +'%Y-%m-%d %H:%M:%S')] ❌ 错误: $BOOT_IMG 不存在"
     exit 1
 fi
 
 if [ ! -d "$KERNEL_DEBS_DIR" ]; then
-    echo "错误: $KERNEL_DEBS_DIR 目录不存在 ❌"
+    echo "[$(date +'%Y-%m-%d %H:%M:%S')] ❌ 错误: $KERNEL_DEBS_DIR 目录不存在"
     exit 1
 fi
 
-# 确保脚本可执行
 chmod +x "$SCRIPT_DIR/scripts"/*.sh
 
-# 执行构建步骤
 echo ""
-echo "[01/14] 创建根文件系统镜像 📦"
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] ========================================== 🚀 开始构建 =========================================="
 "$SCRIPT_DIR/scripts/01-create-image.sh"
-
-echo ""
-echo "[02/14] 安装基础系统 🚀"
 "$SCRIPT_DIR/scripts/02-bootstrap.sh"
-
-echo ""
-echo "[03/14] 挂载系统目录 📁"
 "$SCRIPT_DIR/scripts/03-mount-dev.sh"
-
-echo ""
-echo "[04/14] 配置网络 🌐"
 "$SCRIPT_DIR/scripts/04-config-network.sh"
-
-echo ""
-echo "[05/14] 更新 apt 📡"
 "$SCRIPT_DIR/scripts/05-apt-setup.sh"
-
-echo ""
-echo "[06/14] 安装所有软件包 📦"
 "$SCRIPT_DIR/scripts/07-install-all-packages.sh"
-
-echo ""
-echo "[07/14] 配置语言和时区 🌍"
 "$SCRIPT_DIR/scripts/07-config-locale.sh"
-
-echo ""
-echo "[08/14] 安装内核 🧠"
 "$SCRIPT_DIR/scripts/09-install-kernel.sh"
-
-echo ""
-echo "[09/14] 配置 USB NCM 📱"
 "$SCRIPT_DIR/scripts/10-config-ncm.sh"
-
-echo ""
-echo "[10/14] 配置 fstab 🗂️"
 "$SCRIPT_DIR/scripts/11-config-fstab.sh"
-
-echo ""
-echo "[11/14] 创建用户 👤"
 "$SCRIPT_DIR/scripts/12-create-users.sh"
-
-echo ""
-echo "[12/14] 配置电源管理 🔋"
 "$SCRIPT_DIR/scripts/13-config-power.sh"
-
-echo ""
-echo "[13/14] 清理 🧹"
 "$SCRIPT_DIR/scripts/15-cleanup.sh"
-
-echo ""
-echo "[14/14] 压缩镜像并完成 ✨"
 "$SCRIPT_DIR/scripts/16-finalize.sh"
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] ========================================== 🎉 构建完成 🎉 =========================================="
 
 echo ""
-echo "========================================== 🎉"
-echo "构建完成! 🎊"
-echo "========================================== 🎉"
-echo "产物文件:"
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] 📦 产物文件:"
+ls -lh rootfs.img 2>/dev/null || true
 ls -lh rootfs.7z 2>/dev/null || true
-echo "========================================== 🎉"
+echo ""
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] ✅ 构建成功完成!"

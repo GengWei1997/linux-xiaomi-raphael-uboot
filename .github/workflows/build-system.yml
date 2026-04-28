@@ -81,6 +81,9 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   SUPPRESS_DEPRECATION_WARNINGS: true
 
+permissions:
+  contents: write
+
 jobs:
   build:
     name: 构建镜像

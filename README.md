@@ -124,7 +124,7 @@ fastboot reboot
 - 感谢 Debian 和 Ubuntu 社区
 - 感谢 Phosh 桌面环境开发团队
 - 感谢所有贡献者和用户的支持
-- [@cuicanmx](https://github.com/ccmx200) - 提供帮助以及创新思路
+- [@璀璨梦星](https://github.com/ccmx200) - 提供帮助以及创新思路
 - [@map220v](https://github.com/map220v/ubuntu-xiaomi-nabu) - 原项目
 - [@Pc1598](https://github.com/Pc1598) - sm8150-mainline-raphael内核维护
 - [Aospa-raphael-unofficial/linux](https://github.com/Aospa-raphael-unofficial/linux) - 内核项目

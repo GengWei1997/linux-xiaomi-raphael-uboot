@@ -4,7 +4,10 @@ set -e
 TIMEZONE="${TIMEZONE:-Asia/Shanghai}"
 LANG_DEFAULT="${LANG_DEFAULT:-en_US.UTF-8}"
 
-echo "[07] 配置时区和语言"
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] [07] 🌍 配置时区和语言"
+
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] [07]   └─ 时区: ${TIMEZONE}"
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] [07]   └─ 默认语言: ${LANG_DEFAULT}"
 
 echo "${TIMEZONE}" > rootdir/etc/timezone
 chroot rootdir ln -sf /usr/share/zoneinfo/${TIMEZONE} /etc/localtime
@@ -19,4 +22,4 @@ fi
 EOF
 chmod +x rootdir/etc/profile.d/99-locale-fix.sh
 
-echo "[07] 完成"
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] [07] ✅ 时区语言配置完成"

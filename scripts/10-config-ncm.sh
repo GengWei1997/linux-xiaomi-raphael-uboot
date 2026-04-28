@@ -1,8 +1,9 @@
 #!/bin/bash
 set -e
 
-echo "[10] 配置 USB NCM 网络"
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] [09] 📱 配置 USB NCM 网络"
 
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] [09]   └─ 创建 dnsmasq 配置"
 cat > rootdir/etc/dnsmasq.d/usb-ncm.conf << 'EOF'
 interface=usb0
 bind-dynamic
@@ -12,10 +13,13 @@ dhcp-range=172.16.42.2,172.16.42.254,255.255.255.0,1h
 dhcp-option=3,172.16.42.1
 EOF
 
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] [09]   └─ 启用 IP 转发"
 echo "net.ipv4.ip_forward=1" > rootdir/etc/sysctl.d/99-usb-ncm.conf
 
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] [09]   └─ 启用 dnsmasq 服务"
 chroot rootdir systemctl enable dnsmasq
 
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] [09]   └─ 创建 NCM 配置脚本"
 cat > rootdir/usr/local/sbin/setup-usb-ncm.sh << 'NCM_EOF'
 #!/bin/sh
 set -e
@@ -48,6 +52,7 @@ systemctl restart dnsmasq || true
 NCM_EOF
 chmod +x rootdir/usr/local/sbin/setup-usb-ncm.sh
 
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] [09]   └─ 创建 usb-ncm.service"
 cat > rootdir/etc/systemd/system/usb-ncm.service << 'EOF'
 [Unit]
 Description=USB CDC-NCM gadget setup
@@ -63,6 +68,7 @@ RemainAfterExit=yes
 WantedBy=multi-user.target
 EOF
 
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] [09]   └─ 启用 usb-ncm 服务"
 chroot rootdir systemctl enable usb-ncm
 
-echo "[10] 完成"
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] [09] ✅ USB NCM 配置完成"

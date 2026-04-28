@@ -1,16 +1,19 @@
 #!/bin/bash
 set -e
 
-echo "[13] 配置电源管理和熄屏"
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] [12] 🔋 配置电源管理和熄屏"
 
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] [12]   └─ 禁用睡眠/挂起目标"
 chroot rootdir systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target
 
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] [12]   └─ 配置 NetworkManager"
 cat > rootdir/etc/netplan/01-network-manager-all.yaml << 'EOF'
 network:
   version: 2
   renderer: NetworkManager
 EOF
 
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] [12]   └─ 添加熄屏快捷键 (leijun/jinfan)"
 cat >> rootdir/etc/bash.bashrc << 'EOF'
 
 leijun() {
@@ -32,6 +35,7 @@ jinfan() {
 }
 EOF
 
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] [12]   └─ 创建自动熄屏服务"
 cat > rootdir/etc/systemd/system/blank_screen.service << 'EOF'
 [Unit]
 Description=Auto-blank screen after 15s
@@ -51,4 +55,4 @@ EOF
 
 chroot rootdir systemctl enable blank_screen.service
 
-echo "[13] 完成"
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] [12] ✅ 电源管理配置完成"

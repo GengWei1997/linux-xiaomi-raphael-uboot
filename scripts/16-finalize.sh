@@ -4,8 +4,9 @@ set -e
 IMAGE_NAME="${IMAGE_NAME:-rootfs.img}"
 IMAGE_UUID="${IMAGE_UUID:-ee8d3593-59b1-480e-a3b6-4fefb17ee7d8}"
 
-echo "[16] 卸载并完成镜像"
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] [14] ✨ 卸载并完成镜像"
 
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] [14]   └─ 卸载挂载点..."
 umount rootdir/sys 2>/dev/null || true
 umount rootdir/proc 2>/dev/null || true
 umount rootdir/dev/pts 2>/dev/null || true
@@ -15,8 +16,10 @@ umount rootdir 2>/dev/null || true
 
 rm -d rootdir 2>/dev/null || true
 
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] [14]   └─ 设置镜像 UUID: ${IMAGE_UUID}"
 tune2fs -U ${IMAGE_UUID} ${IMAGE_NAME}
 
-echo 'cmdline for legacy boot: "root=PARTLABEL=userdata"'
+echo ""
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] [14]   └─ Legacy boot cmdline: root=PARTLABEL=userdata"
 
-echo "[16] 完成"
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] [14] ✅ 镜像完成"
