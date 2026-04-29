@@ -27,35 +27,70 @@
 - ✅ GPU
 - ✅ FDE
 
-## 🚀 快速开始
+## � 支持的版本
+
+### 系统类型
+| 类型 | 桌面环境 | 基础系统 |
+|------|----------|----------|
+| `debian-server` | 无 | Debian |
+| `debian-gnome` | GNOME | Debian |
+| `debian-phosh` | Phosh | Debian |
+| `ubuntu-server` | 无 | Ubuntu |
+| `ubuntu-gnome` | GNOME | Ubuntu |
+| `ubuntu-phosh` | Phosh | Ubuntu |
+
+### 操作系统版本
+- **Debian**: `trixie`（默认）
+- **Ubuntu**: `resolute`（默认）
+
+### 内核版本
+- `6.18`（默认）
+- `7.0`（默认）
+
+### Phosh 桌面环境变体
+- `phosh-core`：基础 Phosh 环境（轻量）
+- `phosh-full`：完整的 Phosh 环境（默认，含 GNOME 设置）
+- `phosh-phone`：手机优化的 Phosh 环境（含电话功能）
+
+## �🚀 快速开始
+
+### 直接下载预构建镜像
+
+你可以直接从项目的 [Releases](https://github.com/GengWei1997/linux-xiaomi-raphael-uboot/releases) 页面下载预构建的系统镜像，无需自行构建。
 
 ### 使用 GitHub Actions 自动化构建
 
 1. **Fork 本仓库**到你的 GitHub 账户
 
-2. **构建内核**：
-   - 进入仓库的 Actions 页面
-   - 选择 "内核编译" 工作流
-   - 点击 "Run workflow"
-   - 输入内核版本号（如 `6.18`）
-   - 等待构建完成，产物将自动发布到 Releases
-
 3. **构建系统镜像**：
    - 选择 "构建系统镜像" 工作流
    - 点击 "Run workflow"
-   - 选择系统类型：
+   - **构建模式**：
+       - `parallel`：并行构建所有系统类型（默认）
+       - `single`：单模式构建，只构建一个系统类型
+   - **系统类型**（用逗号分隔多个值）：
        - `debian-gnome`：Debian gnome 版
        - `debian-phosh`：Debian Phosh 版
        - `debian-server`：Debian 服务器版
        - `ubuntu-gnome`：Ubuntu gnome 版
        - `ubuntu-phosh`：Ubuntu Phosh 版
        - `ubuntu-server`：Ubuntu 服务器版
-   - 内核版本号：
-       - `上一步构建的内核版本号`
-   - 选择桌面环境（仅适用于Phosh版本，GNOME版本和server版本无需选择）：
+       - 默认：`debian-server,debian-gnome,debian-phosh,ubuntu-server,ubuntu-gnome,ubuntu-phosh`
+   - **内核版本**（用逗号分隔多个值，如 `6.18,7.0`）：
+       - 默认：`6.18,7.0`
+   - **构建工具**：
+       - `mmdebstrap`（默认）
+       - `debootstrap`
+   - **桌面环境**（仅适用于Phosh版本）：
        - `phosh-core`：基础 Phosh 环境
-       - `phosh-full`：完整的 Phosh 环境
+       - `phosh-full`：完整的 Phosh 环境（默认）
        - `phosh-phone`：手机优化的 Phosh 环境
+   - **Debian 版本**（用逗号分隔多个值）：
+       - 默认：`trixie`
+   - **Ubuntu 版本**（用逗号分隔多个值）：
+       - 默认：`resolute`
+   - **内核仓库**：
+       - 默认：`GengWei1997/linux-xiaomi-raphael-uboot`
    - 等待构建完成，镜像将自动发布到 Releases
 
 ## 📦 镜像特性
