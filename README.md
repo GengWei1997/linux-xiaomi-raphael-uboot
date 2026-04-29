@@ -12,13 +12,13 @@
 
 - **Ubuntu 系列**：GNOME 桌面版、Phosh 移动桌面版、Server 无图形服务器版
 
-- **定制内核**：自主编译适配设备的 6\.18 / 7\.0 版本 Linux 内核
+- **定制内核**：自主编译适配设备的 6.18 / 7.0 版本 Linux 内核
 
 ## ✅ 设备适配状态
 
 当前设备硬件适配完整，主流功能全部可用：
 
-- 网络：2\.4G/5G 双频 Wi\-Fi、USB NCM 网络
+- 网络：2.4G/5G 双频 Wi-Fi、USB NCM 网络
 
 - 外设：蓝牙（文件传输/音频输出）、USB SSH/OTG 功能、触摸屏、手电筒（支持亮度调节）
 
@@ -30,12 +30,12 @@
 
 |系统标识|桌面环境|基础发行版|
 |---|---|---|
-|debian\-server|无（纯命令行）|Debian|
-|debian\-gnome|GNOME|Debian|
-|debian\-phosh|Phosh 移动端桌面|Debian|
-|ubuntu\-server|无（纯命令行）|Ubuntu|
-|ubuntu\-gnome|GNOME|Ubuntu|
-|ubuntu\-phosh|Phosh 移动端桌面|Ubuntu|
+|debian-server|无（纯命令行）|Debian|
+|debian-gnome|GNOME|Debian|
+|debian-phosh|Phosh 移动端桌面|Debian|
+|ubuntu-server|无（纯命令行）|Ubuntu|
+|ubuntu-gnome|GNOME|Ubuntu|
+|ubuntu-phosh|Phosh 移动端桌面|Ubuntu|
 
 ### 系统与内核版本
 
@@ -43,15 +43,15 @@
 
 - **Ubuntu 版本**：resolute（默认最新）
 
-- **内核版本**：6\.18、7\.0（双版本可选，均为定制适配版）
+- **内核版本**：6.18、7.0（双版本可选，均为定制适配版）
 
 ### Phosh 桌面变体
 
-- `phosh\-core`：轻量基础环境，仅保留核心桌面组件
+- `phosh-core`：轻量基础环境，仅保留核心桌面组件
 
-- `phosh\-full`：完整桌面环境（默认），内置 GNOME 设置、全套系统工具
+- `phosh-full`：完整桌面环境（默认），内置 GNOME 设置、全套系统工具
 
-- `phosh\-phone`：手机专属优化，适配移动设备通话与触控逻辑
+- `phosh-phone`：手机专属优化，适配移动设备通话与触控逻辑
 
 ## 🚀 快速上手
 
@@ -59,7 +59,7 @@
 
 项目持续自动构建最新镜像，可直接前往 [Releases](https://github.com/GengWei1997/linux-xiaomi-raphael-uboot/releases) 页面下载，无需本地编译。
 
-> **⚠️ 大文件提示**：`ubuntu\-gnome\-6\.18` / `ubuntu\-gnome\-7\.0` 镜像体积超过 2GB，未上传至 Releases，需前往项目 Artifacts 下载。
+> **⚠️ 大文件提示**：`ubuntu-gnome-6.18` / `ubuntu-gnome-7.0` 镜像体积超过 2GB，未上传至 Releases，需前往项目 Artifacts 下载。
 > 
 > 
 
@@ -76,11 +76,11 @@
 
     - **系统类型**：支持多类型逗号分隔，默认全量构建
 
-    - **内核版本**：支持 `6\.18,7\.0` 双版本（默认）
+    - **内核版本**：支持 `6.18,7.0` 双版本（默认）
 
     - **构建工具**：`mmdebstrap`（默认） / `debootstrap`
 
-    - **Phosh 变体**：仅 Phosh 桌面镜像生效，默认`phosh\-full`
+    - **Phosh 变体**：仅 Phosh 桌面镜像生效，默认`phosh-full`
 
     - **系统版本**：默认 Debian: trixie、Ubuntu: resolute
 
@@ -109,7 +109,7 @@
 
     - 超级用户：`root` / `1234`
 
-- 设备默认 IP：`172\.16\.42\.1`，SSH 连接命令：`ssh user@172\.16\.42\.1`
+- 设备默认 IP：`172.16.42.1`，SSH 连接命令：`ssh user@172.16.42.1`
 
 ### 桌面版专属特性
 
@@ -119,7 +119,7 @@
 
 ### 服务器版专属特性
 
-- 内置网络管理器，支持有线、Wi\-Fi、USB 多种联网方式
+- 内置网络管理器，支持有线、Wi-Fi、USB 多种联网方式
 
 - 开机 15 秒自动熄屏，降低设备功耗
 
@@ -149,9 +149,9 @@ sudo bash -c "$(curl -fsSL https://ghfast.top/https://raw.githubusercontent.com/
 
 1. 设备已完成 **Bootloader 解锁**
 
-2. 电脑安装 `adb`、`fastboot` 刷机工具，并配置环境变量
+2. 在电脑上安装 `adb`、`fastboot` 刷机工具，并配置环境变量
 
-3. 解压下载的 `\.7z` 镜像压缩包，获取 `rootfs\.img`、`u\-boot\.img` 等刷机文件
+3. 解压下载的 `.7z` 镜像压缩包，获取 `rootfs.img`、`u-boot.img` 等刷机文件
 
 ### 刷机命令
 
@@ -184,7 +184,7 @@ fastboot reboot
 
     1. OTG 外接网线，系统自动识别联网
 
-    2. OTG 外接键盘，终端输入 `nmtui` 可视化连接 Wi\-Fi
+    2. OTG 外接键盘，终端输入 `nmtui` 可视化连接 Wi-Fi
 
     3. USB 连接电脑，安装 NCM 驱动后，通过 `nmtui` 配置网络
 
@@ -204,4 +204,3 @@ fastboot reboot
 
 - 所有开源贡献者与项目使用者
 
-> （注：文档部分内容可能由 AI 生成）
