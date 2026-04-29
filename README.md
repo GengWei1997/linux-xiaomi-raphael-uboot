@@ -1,6 +1,6 @@
 # 小米 Raphael 设备 Linux 系统镜像构建项目
 
-本项目为**小米 Raphael（Redmi K20 Pro）**专属 Linux 镜像构建项目，提供完整的 Debian / Ubuntu 系统镜像构建脚本与 GitHub Actions 自动化工作流，支持多内核、多桌面、服务器极简版本，开箱即用，适配性完善。
+本项目为小米 Raphael（Redmi K20 Pro）专属 Linux 镜像构建项目，提供完整的 Debian / Ubuntu 系统镜像构建脚本与 GitHub Actions 自动化工作流，支持多内核、多桌面、服务器极简版本，开箱即用，适配性完善。
 
 ## 📌 项目概述
 
