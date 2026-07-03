@@ -19,15 +19,15 @@ echo "[$(date +'%Y-%m-%d %H:%M:%S')] [06]   └─ 更新系统包..."
 chroot rootdir apt-get update
 chroot rootdir apt-get upgrade -y
 
-BASE_PACKAGES="bash-completion sudo apt-utils ssh openssh-server nano network-manager initramfs-tools chrony curl wget locales tzdata iproute2 zram-tools"
+BASE_PACKAGES="bash-completion sudo apt-utils ssh openssh-server nano network-manager initramfs-tools chrony curl wget locales tzdata iproute2 zram-tools qrtr-tools"
 
-if [[ "$SYSTEM_TYPE" == *"debian-"* ]]; then 
-    BASE_PACKAGES="bash-completion sudo apt-utils ssh openssh-server nano network-manager initramfs-tools chrony curl wget locales tzdata fonts-wqy-microhei dnsmasq nftables iproute2 zram-tools"
+if [[ "$SYSTEM_TYPE" == *"debian-"* ]]; then
+    BASE_PACKAGES="bash-completion sudo apt-utils ssh openssh-server nano network-manager initramfs-tools chrony curl wget locales tzdata fonts-wqy-microhei dnsmasq nftables iproute2 zram-tools qrtr-tools"
 elif [[ "$SYSTEM_TYPE" == *"ubuntu-"* ]]; then
     if [[ "$SYSTEM_TYPE" == *"server"* ]]; then
-        BASE_PACKAGES="bash-completion sudo apt-utils ssh openssh-server nano network-manager initramfs-tools chrony curl wget locales tzdata dnsmasq nftables iproute2 zram-tools"
+        BASE_PACKAGES="bash-completion sudo apt-utils ssh openssh-server nano network-manager initramfs-tools chrony curl wget locales tzdata dnsmasq nftables iproute2 zram-tools qrtr-tools"
     else
-        BASE_PACKAGES="bash-completion sudo apt-utils ssh openssh-server nano network-manager initramfs-tools chrony curl wget locales tzdata dnsmasq nftables iproute2 zram-tools"
+        BASE_PACKAGES="bash-completion sudo apt-utils ssh openssh-server nano network-manager initramfs-tools chrony curl wget locales tzdata dnsmasq nftables iproute2 zram-tools qrtr-tools"
     fi
 fi
 
