@@ -46,33 +46,16 @@ on:
         required: false
         default: 'GengWei1997/kernel-deb'
         type: string
-  push:
-    branches:
-      - main
-    paths:
-      - 'scripts/**'
-      - 'config/**'
-      - 'build.sh'
-      - '*.sh'
-  pull_request:
-    paths:
-      - 'scripts/**'
-      - 'config/**'
-      - 'build.sh'
-      - '*.sh'
 
 env:
   HOSTNAME: xiaomi-raphael
-  BOOT_IMG: xiaomi-k20pro-boot.img
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-  SUPPRESS_DEPRECATION_WARNINGS: true
 
 permissions:
   contents: write
 
 jobs:
   generate-matrix:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ steps.generate.outputs.matrix }}
       build_mode: ${{ steps.generate.outputs.build_mode }}
@@ -186,7 +169,7 @@ jobs:
       DESKTOP_ENV: ${{ matrix.desktop_env }}
       DEBIAN_VERSION: ${{ matrix.debian_version }}
       UBUNTU_VERSION: ${{ matrix.ubuntu_version }}
-      KERNEL_REPO: ${{ github.event.inputs.kernel_repository || 'GengWei1997/linux-xiaomi-raphael-uboot' }}
+      KERNEL_REPO: ${{ github.event.inputs.kernel_repository || 'GengWei1997/kernel-deb' }}
 
     steps:
       - name: 检出代码
@@ -195,57 +178,33 @@ jobs:
       - name: 安装构建工具
         run: |
           echo "[$(date +'%Y-%m-%d %H:%M:%S')] 检查并安装构建工具: ${{ env.BOOTSTRAP_TOOL }}"
-          
+
+          sudo apt-get update
+          sudo apt-get install -y mmdebstrap debootstrap ubuntu-keyring debian-archive-keyring p7zip-full
+
+          # 确保 loop 设备可用 (4096 扇区嵌套 GPT)
+          sudo modprobe loop 2>/dev/null || true
+
           if [ "${{ env.BOOTSTRAP_TOOL }}" = "mmdebstrap" ]; then
-            if ! command -v mmdebstrap &> /dev/null; then
-              echo "[$(date +'%Y-%m-%d %H:%M:%S')]   安装 mmdebstrap 和依赖..."
-              sudo apt-get update
-              sudo apt-get install -y mmdebstrap debian-archive-keyring
+            if command -v mmdebstrap &> /dev/null; then
               echo "[$(date +'%Y-%m-%d %H:%M:%S')]   mmdebstrap 安装完成"
             else
-              echo "[$(date +'%Y-%m-%d %H:%M:%S')]   mmdebstrap 已安装，跳过"
+              echo "[$(date +'%Y-%m-%d %H:%M:%S')]   mmdebstrap 安装失败"
+              exit 1
             fi
           else
             if ! command -v debootstrap &> /dev/null; then
               echo "[$(date +'%Y-%m-%d %H:%M:%S')]   安装 debootstrap..."
-              sudo apt-get update
               sudo apt-get install -y debootstrap
-              echo "[$(date +'%Y-%m-%d %H:%M:%S')]   debootstrap 安装完成"
-            else
-              echo "[$(date +'%Y-%m-%d %H:%M:%S')]   debootstrap 已安装，跳过"
             fi
+            echo "[$(date +'%Y-%m-%d %H:%M:%S')]   debootstrap 已安装"
           fi
 
-      - name: 下载内核包和boot.img (并行)
+      - name: 下载内核包
         run: |
-          mkdir -p xiaomi-raphael-debs_${{ env.KERNEL_VERSION }}
+          echo "正在下载内核包 (版本: ${{ env.KERNEL_VERSION }}, 仓库: ${{ env.KERNEL_REPO }})..."
 
-          echo "正在下载内核包和boot.img (版本: ${{ env.KERNEL_VERSION }})..."
-
-          curl -sL -o xiaomi-raphael-debs_${{ env.KERNEL_VERSION }}/linux-image-xiaomi-raphael.deb \
-            "https://github.com/${{ env.KERNEL_REPO }}/releases/download/kernel-v${{ env.KERNEL_VERSION }}/linux-image-xiaomi-raphael.deb" &
-          PID1=$!
-
-          curl -sL -o xiaomi-raphael-debs_${{ env.KERNEL_VERSION }}/linux-headers-xiaomi-raphael.deb \
-            "https://github.com/${{ env.KERNEL_REPO }}/releases/download/kernel-v${{ env.KERNEL_VERSION }}/linux-headers-xiaomi-raphael.deb" &
-          PID2=$!
-
-          curl -sL -o xiaomi-raphael-debs_${{ env.KERNEL_VERSION }}/firmware-xiaomi-raphael.deb \
-            "https://github.com/${{ env.KERNEL_REPO }}/releases/download/kernel-v${{ env.KERNEL_VERSION }}/firmware-xiaomi-raphael.deb" &
-          PID3=$!
-
-          curl -sL -o xiaomi-k20pro-boot.img \
-            "https://github.com/GengWei1997/kernel-deb/releases/download/v1.0.0/xiaomi-k20pro-boot.img" &
-          PID4=$!
-
-          if [[ "${{ env.SYSTEM_TYPE }}" == *"phosh"* || "${{ env.SYSTEM_TYPE }}" == *"gnome"* ]]; then
-            curl -sL -o alsa-xiaomi-raphael.deb \
-              "https://github.com/${{ env.KERNEL_REPO }}/releases/download/kernel-v${{ env.KERNEL_VERSION }}/alsa-xiaomi-raphael.deb" &
-            PID5=$!
-          fi
-
-          wait $PID1 $PID2 $PID3 $PID4
-          [ -n "$PID5" ] && wait $PID5 || true
+          bash scripts/00-download-deps.sh "${{ env.KERNEL_VERSION }}" "${{ env.KERNEL_REPO }}"
 
           echo "所有文件下载完成"
 
@@ -253,13 +212,16 @@ jobs:
         run: |
           echo "检查构建所需文件..."
 
-          if [ ! -f "xiaomi-k20pro-boot.img" ]; then
-            echo "错误: xiaomi-k20pro-boot.img 不存在"
-            exit 1
-          fi
-
           if [ ! -f "xiaomi-raphael-debs_${{ env.KERNEL_VERSION }}/linux-image-xiaomi-raphael.deb" ]; then
             echo "错误: linux-image-xiaomi-raphael.deb 不存在"
+            exit 1
+          fi
+          if [ ! -f "xiaomi-raphael-debs_${{ env.KERNEL_VERSION }}/linux-headers-xiaomi-raphael.deb" ]; then
+            echo "错误: linux-headers-xiaomi-raphael.deb 不存在"
+            exit 1
+          fi
+          if [ ! -f "xiaomi-raphael-debs_${{ env.KERNEL_VERSION }}/firmware-xiaomi-raphael.deb" ]; then
+            echo "错误: firmware-xiaomi-raphael.deb 不存在"
             exit 1
           fi
 
@@ -271,7 +233,10 @@ jobs:
 
           chmod +x build.sh
 
-          sudo BOOTSTRAP_TOOL="${{ env.BOOTSTRAP_TOOL }}" DEBIAN_VERSION="${{ env.DEBIAN_VERSION }}" UBUNTU_VERSION="${{ env.UBUNTU_VERSION }}" ./build.sh "${{ env.SYSTEM_TYPE }}" "${{ env.KERNEL_VERSION }}" "${{ env.DESKTOP_ENV }}" "${{ env.DEBIAN_VERSION || env.UBUNTU_VERSION }}"
+          sudo env SYSTEM_TYPE="${{ env.SYSTEM_TYPE }}" KERNEL_VERSION="${{ env.KERNEL_VERSION }}" \
+            DEBIAN_VERSION="${{ env.DEBIAN_VERSION }}" UBUNTU_VERSION="${{ env.UBUNTU_VERSION }}" \
+            BOOTSTRAP_TOOL="${{ env.BOOTSTRAP_TOOL }}" DESKTOP_ENV="${{ env.DESKTOP_ENV }}" \
+            bash build.sh "${{ env.SYSTEM_TYPE }}" "${{ env.KERNEL_VERSION }}"
 
       - name: 生成产物文件名和校验和
         id: artifacts
@@ -285,7 +250,7 @@ jobs:
           echo "artifact_name=${FILENAME}" >> $GITHUB_OUTPUT
           
           # 生成校验和文件
-          sha256sum rootfs.img xiaomi-k20pro-boot.img > ${FILENAME}.sha256
+          sha256sum rootfs.img > ${FILENAME}.sha256
           cat ${FILENAME}.sha256
           
           # 记录文件大小
@@ -296,11 +261,13 @@ jobs:
         run: |
           FILENAME="${{ steps.artifacts.outputs.filename }}"
           echo "压缩为 ${FILENAME}.7z ..."
-          7z a "${FILENAME}.7z" rootfs.img xiaomi-k20pro-boot.img
+          7z a "${FILENAME}.7z" rootfs.img
           ls -lh "${FILENAME}.7z"
+          # 压缩成功后删除源镜像, 防止 runner 磁盘峰值超限
+          rm -f rootfs.img
 
       - name: 上传产物到 Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ steps.artifacts.outputs.artifact_name }}
           path: |
@@ -311,19 +278,20 @@ jobs:
       - name: 清理临时文件
         if: always()
         run: |
+          sudo losetup -D 2>/dev/null || true
           sudo rm -f alsa-xiaomi-raphael.deb 2>/dev/null || true
           sudo rm -rf rootdir 2>/dev/null || true
           rm -rf xiaomi-raphael-debs_* 2>/dev/null || true
-          rm -f rootfs.img xiaomi-k20pro-boot.img 2>/dev/null || true
+          rm -f rootfs.img 2>/dev/null || true
 
   release:
     needs: [generate-matrix, build]
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' && needs.build.result == 'success'
     name: 发布统一 Release
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: 下载所有产物
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: artifacts
           pattern: rootfs-*
@@ -359,52 +327,48 @@ jobs:
           # GitHub Release 单个文件大小限制：2GB = 2147483648 字节
           SIZE_LIMIT=2147483648
           
-          # 遍历所有产物
-          for artifact_dir in ${ARTIFACTS_DIR}/rootfs-*/; do
-            [ -d "$artifact_dir" ] || continue
-            
-            for file in "${artifact_dir}"*.7z; do
-              [ -f "$file" ] || continue
-              
-              filename=$(basename "$file")
-              filesize=$(stat -c%s "$file")
-              
-              # 解析文件名信息
-              # 格式: rootfs-{system_type}-{kernel_version}-{os_version}[-{desktop_env}].7z
-              IFS='-' read -ra PARTS <<< "${filename%.7z}"
-              SYSTEM_TYPE="${PARTS[1]}"
-              KERNEL_VER="${PARTS[2]}"
-              OS_VER="${PARTS[3]}"
-              
-              # 获取校验和
-              shafile="${file%.7z}.sha256"
-              if [ -f "$shafile" ]; then
-                SHA256=$(awk 'NR==1 {print $1}' "$shafile")
-              else
-                SHA256=$(sha256sum "$file" | awk '{print $1}')
-              fi
-              
-              # 构建文件信息行
-              FILE_INFO="| ${filename} | ${SYSTEM_TYPE} | ${KERNEL_VER} | ${OS_VER} |"
-              
-              if [ "$filesize" -gt "$SIZE_LIMIT" ]; then
-                # 大文件：不加入 Release，保留在 Artifacts
-                LARGE_FILES="${LARGE_FILES}
+          # 遍历所有产物 (find 递归, 兼容单/多 artifact 下载布局: 单 artifact 直接解压到根, 多 artifact 在子目录)
+          while IFS= read -r file; do
+            [ -f "$file" ] || continue
+
+            filename=$(basename "$file")
+            filesize=$(stat -c%s "$file")
+
+            # 解析文件名信息
+            # 格式: rootfs-{system_type}-{kernel_version}-{os_version}[-{desktop_env}].7z
+            IFS='-' read -ra PARTS <<< "${filename%.7z}"
+            SYSTEM_TYPE="${PARTS[1]}"
+            KERNEL_VER="${PARTS[2]}"
+            OS_VER="${PARTS[3]}"
+
+            # 获取校验和
+            shafile="${file%.7z}.sha256"
+            if [ -f "$shafile" ]; then
+              SHA256=$(awk 'NR==1 {print $1}' "$shafile")
+            else
+              SHA256=$(sha256sum "$file" | awk '{print $1}')
+            fi
+
+            # 构建文件信息行
+            FILE_INFO="| ${filename} | ${SYSTEM_TYPE} | ${KERNEL_VER} | ${OS_VER} |"
+
+            if [ "$filesize" -gt "$SIZE_LIMIT" ]; then
+              # 大文件：不加入 Release，保留在 Artifacts
+              LARGE_FILES="${LARGE_FILES}
           - ${filename} (${filesize} bytes)"
-                FILE_LIST="${FILE_LIST}
+              FILE_LIST="${FILE_LIST}
           - ⚠️ **${filename}** (文件过大，请从 Artifacts 下载)"
-              else
-                # 小文件：加入 Release，创建符号链接到统一目录
-                ln -sf "$(realpath "$file")" "${RELEASE_DIR}/${filename}"
-                FILE_LIST="${FILE_LIST}
+            else
+              # 小文件：加入 Release，创建符号链接到统一目录
+              ln -sf "$(realpath "$file")" "${RELEASE_DIR}/${filename}"
+              FILE_LIST="${FILE_LIST}
           - ✅ **${filename}**"
-              fi
-              
-              # 收集校验和信息
-              SHA256_LIST="${SHA256_LIST}
+            fi
+
+            # 收集校验和信息
+            SHA256_LIST="${SHA256_LIST}
           ${filename}: ${SHA256}"
-            done
-          done
+          done < <(find "${ARTIFACTS_DIR}" -type f -name '*.7z')
           
           # 列出要上传的文件
           echo "要上传到 Release 的文件:"
@@ -470,7 +434,7 @@ jobs:
           } >> $GITHUB_OUTPUT
 
       - name: 发布 Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.release-info.outputs.tag }}
           name: ${{ steps.release-info.outputs.name }}

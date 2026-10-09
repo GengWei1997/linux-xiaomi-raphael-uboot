@@ -53,18 +53,10 @@
 ### 方式二：GitHub Actions 自定义构建（推荐）
 
 1. **Fork** 本仓库至个人 GitHub 账号
-2. 进入 **Actions** 页面 → 选择「构建系统镜像」工作流
-3. 点击 **Run workflow**，自定义参数：
+2. 进入 **Actions** 页面 → 选择「构建系统镜像」工作流 → 点击 **Run workflow**，按需选择系统类型 / 内核版本 / 构建工具
+3. 等待构建完成，镜像自动发布至 Releases
 
-| 参数 | 说明 | 默认值 |
-|:---:|:---|:---:|
-| 构建模式 | `parallel` 并行构建 / `single` 单独构建 | `parallel` |
-| 系统类型 | 支持逗号分隔，留空则全量构建 | 全部 |
-| 内核版本 | 跟随 [Aospa-raphael-unofficial/linux](https://github.com/Aospa-raphael-unofficial/linux) 上游更新 | `7.1` |
-| 构建工具 | `mmdebstrap` / `debootstrap` | `mmdebstrap` |
-| Phosh 变体 | 仅 Phosh 镜像生效 | `phosh-core` |
-
-4. 等待构建完成，镜像自动发布至 Releases
+> 参数说明详见 [Wiki: 自定义构建](https://github.com/GengWei1997/linux-xiaomi-raphael-uboot/wiki/Custom-Build)
 
 ## 📦 镜像特性
 
@@ -74,7 +66,7 @@
 - 预装简体中文语言包 + 中国标准时区，开箱汉化
 - 支持 USB NCM 网络共享，电脑直连设备 SSH
 - 内置 SSH 服务，支持 root / 普通用户远程登录
-- 支持 **一键内核更新脚本**，在线升级定制内核
+- 支持 `dpkg -i` 直接更新内核（固定名引导自动刷新，自动卸载旧内核）
 
 | 账户 | 用户名 | 密码 |
 |:---:|:---:|:---:|
@@ -93,59 +85,33 @@
 - 开机 15 秒自动熄屏，降低设备功耗
 - 自定义快捷命令：`leijun` 关闭屏幕 · `jinfan` 点亮屏幕
 
-## ⬆️ 内核更新
-
-<details>
-<summary><b>⚠️ 仅做内核调试用，非必要无需更新</b></summary>
-
-建议 **root 权限** 执行，完成后重启设备即可生效。
-
-| 链接 | 命令 |
-|:---:|:---|
-| 🌏 国内加速 | `sudo bash -c "$(curl -fsSL https://ghfast.top/https://raw.githubusercontent.com/GengWei1997/kernel-deb/refs/heads/main/ghproxy-Update-kernel.sh)"` |
-| 🌐 原始链接 | `sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/GengWei1997/kernel-deb/refs/heads/main/Update-kernel.sh)"` |
-
-</details>
-
 ## 🔧 安装教程
 
-### 前置条件
+完整刷机教程见 [Wiki: 安装教程](https://github.com/GengWei1997/linux-xiaomi-raphael-uboot/wiki/Installation)，或直接下载 [一键安装](https://github.com/GengWei1997/linux-xiaomi-raphael-uboot/releases/tag/%E4%B8%80%E9%94%AE%E5%AE%89%E8%A3%85) 整合包
 
-- ✅ 设备已完成 **Bootloader 解锁**
-- ✅ 电脑已安装 `adb` / `fastboot` 工具
-- ✅ 下载镜像压缩包，解压获取：
-  - `rootfs.img` — 系统镜像
-  - `xiaomi-k20pro-boot.img` — 内核镜像
-  - [u-boot.img](https://github.com/GengWei1997/linux-xiaomi-raphael-uboot/releases/tag/v1.0.0) — U-Boot 引导
+## 🔄 内核更新
 
-### 刷机命令
+镜像已集成 **固定名引导**（与 [Nura](https://wiki.nura.eco) / postmarketOS 一致）：`dpkg -i ./*.deb` 即可自动更新内核，钩子自动刷新 `/boot/vmlinuz` + `/boot/initrd.img` 与 dtbs，详见 [Wiki: 内核更新](https://github.com/GengWei1997/linux-xiaomi-raphael-uboot/wiki/Kernel-Updates)
 
-```bash
-# 1. 进入 Fastboot 模式
-adb reboot bootloader
+## 💽 分区方案（GPT）
 
-# 2. 擦除分区
-fastboot erase dtbo
-fastboot erase boot
-fastboot erase cache
-fastboot erase userdata
+镜像采用 **GPT 分区表**（与 [Nura](https://wiki.nura.eco) / postmarketOS 一致），整体通过 `fastboot flash userdata rootfs.img` 刷入设备，内核与根文件系统都位于镜像内部，无需改动设备的 Android 分区布局。
 
-# 3. 刷入镜像
-fastboot flash cache xiaomi-k20pro-boot.img
-fastboot flash boot u-boot.img
-fastboot flash userdata rootfs.img
+| 分区 | 编号 | 文件系统 | 标签 | 大小 | 类型 |
+|:---:|:---:|:---|:---:|:---:|:---|
+| Boot | p1 | FAT32 | `Boot` | 256M | ESP (`c12a7328-f81f-11d2-ba4b-00a0c93ec93b`) |
+| Root | p2 | ext4 | `Root` | 剩余空间 | DPS arm64 root (`b921b045-1df0-41c3-af44-4c6f280d3fae`) |
 
-# 4. 重启设备
-fastboot reboot
-```
-
+- 逻辑扇区大小: **4096 字节**（匹配 UFS 存储，对应 `deviceinfo_rootfs_image_sector_size`）
+- Boot 分区起始: `2048s`（8MiB 对齐）
+- 根分区固定 UUID: `ee8d3593-59b1-480e-a3b6-4fefb17ee7d8`
+- Boot 分区 UUID: `1BF4-A32B`
+- 启动 cmdline 参考: `root=UUID=ee8d3593-59b1-480e-a3b6-4fefb17ee7d8`
+- 启动链: u-boot → systemd-boot（`EFI/BOOT/BOOTAA64.EFI`）→ 固定引导条目（`/boot/vmlinuz` + `/boot/initrd.img`，与 Nura/pmOS 一致）→ 内核
+- initramfs 启动时自动将 `userdata` 分区以 4096B 扇区映射为 loop 设备，暴露镜像内嵌套 GPT 分区（与 Nura/postmarketOS 的 mount_subpartitions 机制一致，由 `scripts/09-install-kernel.sh` 生成的 local-top 脚本实现）
 ## ❓ 常见问题
 
-| 问题 | 解决方案 |
-|:---|:---|
-| 蜂窝网络支持情况 | 联通 / 电信已支持，移动正在修复中 *[@GavinLiuOnline](https://github.com/GavinLiuOnline)* |
-| Windows 无法连接设备 | 参考 [NCM 驱动教程](https://www.bilibili.com/video/BV1tW4y1A79V/) |
-| Server 版如何联网 | OTG 外接网线自动联网 · OTG 外接键盘输入 `nmtui` 连接 Wi-Fi |
+常见问题与解决方案见 [Wiki: 常见问题](https://github.com/GengWei1997/linux-xiaomi-raphael-uboot/wiki/FAQ)
 
 ---
 
