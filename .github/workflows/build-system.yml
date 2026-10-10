@@ -17,9 +17,9 @@ on:
         default: 'debian-server,debian-gnome,debian-phosh,ubuntu-server,ubuntu-gnome,ubuntu-phosh'
         type: string
       kernel_versions:
-        description: '内核版本 (默认7.1)'
+        description: '内核版本 (默认7.3)'
         required: false
-        default: '7.1'
+        default: '7.3'
         type: string
       bootstrap_tools:
         description: '构建工具 (用逗号分隔多个值，如: mmdebstrap)'

@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-KERNEL_VERSION="${1:-7.1}"
+KERNEL_VERSION="${1:-7.3}"
 REPO="${2:-GengWei1997/kernel-deb}"
 
 echo "下载内核包"

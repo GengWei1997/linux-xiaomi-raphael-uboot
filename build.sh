@@ -4,7 +4,7 @@ set -e
 
 # 解析参数
 SYSTEM_TYPE="${1:?请指定系统类型}"
-KERNEL_VERSION="${2:-6.18}"
+KERNEL_VERSION="${2:-7.3}"
 DESKTOP_ENV="${3:-phosh-full}"
 
 # 解析发行版版本参数
