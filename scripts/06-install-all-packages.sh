@@ -26,7 +26,7 @@ elif [[ "$SYSTEM_TYPE" == *"ubuntu-"* ]]; then
     fi
 fi
 
-DEVICE_PACKAGES="rmtfs protection-domain-mapper tqftpserv qrtr-tools"
+DEVICE_PACKAGES="rmtfs protection-domain-mapper tqftpserv qrtr-tools libqmi-utils"
 
 if [[ "$SYSTEM_TYPE" != *"server"* ]]; then
     case "$DESKTOP_ENV" in
@@ -70,6 +70,11 @@ chroot rootdir bash -c 'apt-get install -y systemd-boot-efi 2>/dev/null || apt-g
 
 # 修改服务配置
 sed -i '/ConditionKernelVersion/d' rootdir/lib/systemd/system/pd-mapper.service 2>/dev/null || true
+
+# UIM 卡槽选择 (pmOS msm-modem-uim-selection), SIM 自动识别
+install -m 755 scripts/msm-modem-uim-selection rootdir/usr/libexec/
+install -m 644 scripts/msm-modem-uim-selection.service rootdir/lib/systemd/system/
+chroot rootdir systemctl enable msm-modem-uim-selection 2>/dev/null || true
 
 if [ -f "alsa-xiaomi-raphael.deb" ]; then
     echo "[$(date +'%Y-%m-%d %H:%M:%S')]   └─ 安装 ALSA 配置"
