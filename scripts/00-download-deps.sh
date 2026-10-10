@@ -20,6 +20,9 @@ curl -sL -o xiaomi-raphael-debs_$KERNEL_VERSION/linux-headers-xiaomi-raphael.deb
 curl -sL -o xiaomi-raphael-debs_$KERNEL_VERSION/firmware-xiaomi-raphael.deb \
     "https://github.com/$REPO/releases/download/kernel-v$KERNEL_VERSION/firmware-xiaomi-raphael.deb"
 
+curl -sL -o xiaomi-raphael-debs_$KERNEL_VERSION/alsa-xiaomi-raphael.deb \
+    "https://github.com/$REPO/releases/download/kernel-v$KERNEL_VERSION/alsa-xiaomi-raphael.deb"
+
 echo ""
 echo "下载完成!"
 echo ""

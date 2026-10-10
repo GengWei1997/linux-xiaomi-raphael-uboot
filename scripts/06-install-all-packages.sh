@@ -90,11 +90,11 @@ chroot rootdir systemctl enable hexagonrpcd 2>/dev/null || true
 # 固件已内置在镜像中, 无需 droid-juicer 提取
 chroot rootdir systemctl mask droid-juicer 2>/dev/null || true
 
-if [ -f "alsa-xiaomi-raphael.deb" ]; then
+if [ -f "$KERNEL_DEBS_DIR/alsa-xiaomi-raphael.deb" ]; then
     echo "[$(date +'%Y-%m-%d %H:%M:%S')]   └─ 安装 ALSA 配置"
     # alsa-xiaomi-raphael 依赖 alsa-ucm-conf（桌面版由桌面包连带安装，server 版需显式安装）
     chroot rootdir bash -c 'apt-get install -y alsa-ucm-conf 2>/dev/null || true'
-    cp alsa-xiaomi-raphael.deb rootdir/tmp/
+    cp "$KERNEL_DEBS_DIR/alsa-xiaomi-raphael.deb" rootdir/tmp/
     chroot rootdir dpkg -i /tmp/alsa-xiaomi-raphael.deb
     rm rootdir/tmp/alsa-xiaomi-raphael.deb
 fi
