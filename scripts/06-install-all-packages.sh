@@ -26,7 +26,7 @@ elif [[ "$SYSTEM_TYPE" == *"ubuntu-"* ]]; then
     fi
 fi
 
-DEVICE_PACKAGES="rmtfs protection-domain-mapper tqftpserv qrtr-tools libqmi-utils"
+DEVICE_PACKAGES="rmtfs protection-domain-mapper tqftpserv qrtr-tools libqmi-utils hexagonrpcd"
 
 if [[ "$SYSTEM_TYPE" != *"server"* ]]; then
     case "$DESKTOP_ENV" in
@@ -75,6 +75,20 @@ sed -i '/ConditionKernelVersion/d' rootdir/lib/systemd/system/pd-mapper.service 
 install -m 755 scripts/msm-modem-uim-selection rootdir/usr/libexec/
 install -m 644 scripts/msm-modem-uim-selection.service rootdir/lib/systemd/system/
 chroot rootdir systemctl enable msm-modem-uim-selection 2>/dev/null || true
+
+# hexagonrpcd (SDSP sensors daemon): 固定 sdsp 设备, attach sensorspd, 崩溃自动重启
+mkdir -p rootdir/etc/systemd/system/hexagonrpcd.service.d/
+cat > rootdir/etc/systemd/system/hexagonrpcd.service.d/sdsp.conf <<EOF
+[Service]
+Environment=hexagonrpcd_device=/dev/fastrpc-sdsp
+Environment=hexagonrpcd_dsp=sdsp
+Environment=hexagonrpcd_extra=-s
+Restart=always
+RestartSec=3
+EOF
+chroot rootdir systemctl enable hexagonrpcd 2>/dev/null || true
+# 固件已内置在镜像中, 无需 droid-juicer 提取
+chroot rootdir systemctl mask droid-juicer 2>/dev/null || true
 
 if [ -f "alsa-xiaomi-raphael.deb" ]; then
     echo "[$(date +'%Y-%m-%d %H:%M:%S')]   └─ 安装 ALSA 配置"
