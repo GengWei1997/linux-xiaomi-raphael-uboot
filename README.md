@@ -39,6 +39,7 @@
 | 🔌 **USB** | NCM 网络共享 · OTG 功能 | ✅ |
 | 🖥️ **显示** | 屏幕输出 · GPU 渲染 | ✅ |
 | 🔊 **音频** | 扬声器 · 耳机输出 | ✅ |
+| 🎬 **视频** | Venus VA-API 硬件解码/编码 (H.264/HEVC) | ✅ |
 | 👆 **输入** | 触摸屏 · 闪光灯（手电筒） | ✅ |
 | 🔋 **系统** | 电池检测 · 实时时钟 · FDE 加密 | ✅ |
 
@@ -184,6 +185,12 @@
       </a>
     </td>
     <td align="center">
+      <a href="https://github.com/snowf14k3">
+        <img src="https://github.com/snowf14k3.png" width="60" height="60" style="border-radius:50%"><br>
+        <sub><b>snowf14k3</b></sub>
+      </a>
+    </td>
+    <td align="center">
       <a href="https://gitlab.postmarketos.org/soc/qualcomm-sm8150/linux">
         <img src="https://gitlab.postmarketos.org/uploads/-/system/project/avatar/4623/sm8150.png" width="60" height="60" style="border-radius:50%"><br>
         <sub><b>sm8150-mainline</b></sub>
@@ -193,7 +200,8 @@
 </table>
 
 <p align="center">
-  <i>Linux 内核官方开发团队 · Debian / Ubuntu 开源社区 · Phosh 桌面开发团队 · 以及所有开源贡献者</i>
+  <i>Linux 内核官方开发团队 · Debian / Ubuntu 开源社区 · Phosh 桌面开发团队 · 以及所有开源贡献者</i><br>
+  <a href="https://nura.eco/">Nura（原 postmarketOS）</a>
 </p>
 
 ---

@@ -24,6 +24,11 @@ curl -sL -o xiaomi-raphael-debs_$KERNEL_VERSION/alsa-xiaomi-raphael.deb \
     "https://github.com/$REPO/releases/download/kernel-v$KERNEL_VERSION/alsa-xiaomi-raphael.deb"
 
 echo ""
+echo "下载 Venus VAAPI 驱动源码 (snowf14k3/venus-vaapi-driver)..."
+curl -sL -o xiaomi-raphael-debs_$KERNEL_VERSION/venus-vaapi-driver.tar.gz \
+    "https://github.com/snowf14k3/venus-vaapi-driver/archive/refs/heads/main.tar.gz"
+
+echo ""
 echo "下载完成!"
 echo ""
 ls -lh xiaomi-raphael-debs_$KERNEL_VERSION/

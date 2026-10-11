@@ -90,6 +90,18 @@ chroot rootdir systemctl enable hexagonrpcd 2>/dev/null || true
 # 固件已内置在镜像中, 无需 droid-juicer 提取
 chroot rootdir systemctl mask droid-juicer 2>/dev/null || true
 
+# Venus VAAPI 驱动 (硬件视频解码/编码, snowf14k3/venus-vaapi-driver)
+if [ -f "$KERNEL_DEBS_DIR/venus-vaapi-driver.tar.gz" ]; then
+    echo "[$(date +'%Y-%m-%d %H:%M:%S')]   └─ 构建并安装 Venus VAAPI 驱动"
+    chroot rootdir bash -c 'apt-get install -y build-essential meson ninja-build pkg-config libva-dev libdrm-dev vainfo 2>/dev/null || true'
+    cp "$KERNEL_DEBS_DIR/venus-vaapi-driver.tar.gz" rootdir/tmp/
+    chroot rootdir bash -c 'cd /tmp && tar xzf venus-vaapi-driver.tar.gz && cd venus-vaapi-driver-* && meson setup build -Dwerror=false --prefix=/usr && meson compile -C build && meson install -C build && ln -sf venus_drv_video.so /usr/lib/aarch64-linux-gnu/dri/msm_drv_video.so'
+    # 自动加载驱动 (libva 无需 LIBVA_DRIVER_NAME)
+    install -m 644 scripts/venus-vaapi-driver/10-venus-vaapi.conf rootdir/usr/lib/environment.d/
+    install -m 755 scripts/venus-vaapi-driver/venus-vaapi.sh rootdir/etc/profile.d/
+    rm -rf rootdir/tmp/venus-vaapi-driver*
+fi
+
 if [ -f "$KERNEL_DEBS_DIR/alsa-xiaomi-raphael.deb" ]; then
     echo "[$(date +'%Y-%m-%d %H:%M:%S')]   └─ 安装 ALSA 配置"
     # alsa-xiaomi-raphael 依赖 alsa-ucm-conf（桌面版由桌面包连带安装，server 版需显式安装）
