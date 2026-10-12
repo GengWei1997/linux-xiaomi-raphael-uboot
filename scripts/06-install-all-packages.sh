@@ -74,21 +74,38 @@ sed -i '/ConditionKernelVersion/d' rootdir/lib/systemd/system/pd-mapper.service 
 # UIM 卡槽选择 (pmOS msm-modem-uim-selection), SIM 自动识别
 install -m 755 scripts/msm-modem-uim-selection rootdir/usr/libexec/
 install -m 644 scripts/msm-modem-uim-selection.service rootdir/lib/systemd/system/
+install -m 755 scripts/msm-modem-uim-retry rootdir/usr/libexec/
+install -m 644 scripts/msm-modem-uim-retry.service rootdir/lib/systemd/system/
 chroot rootdir systemctl enable msm-modem-uim-selection 2>/dev/null || true
 
 # hexagonrpcd (SDSP sensors daemon): 固定 sdsp 设备, attach sensorspd, 崩溃自动重启
+# 直接调用真实二进制, 绕开 wrapper 默认的 -R /var/lib/droid-juicer/sensors/
 mkdir -p rootdir/etc/systemd/system/hexagonrpcd.service.d/
 cat > rootdir/etc/systemd/system/hexagonrpcd.service.d/sdsp.conf <<EOF
 [Service]
-Environment=hexagonrpcd_device=/dev/fastrpc-sdsp
-Environment=hexagonrpcd_dsp=sdsp
-Environment=hexagonrpcd_extra=-s
+ExecStart=
+ExecStart=/usr/libexec/hexagonrpc/hexagonrpcd -f /dev/fastrpc-sdsp -d sdsp -s
 Restart=always
 RestartSec=3
 EOF
+# 尽早启动 hexagonrpcd: 移除 After=multi-user.target,
+# 避免被 UIM 45s 阻塞拖到 SLPI 40s 看门狗窗口之外 (SLPI sensor_process 停滞崩溃)
+sed -i '/^After=multi-user.target$/d' rootdir/usr/lib/systemd/system/hexagonrpcd.service 2>/dev/null || true
 chroot rootdir systemctl enable hexagonrpcd 2>/dev/null || true
 # 固件已内置在镜像中, 无需 droid-juicer 提取
 chroot rootdir systemctl mask droid-juicer 2>/dev/null || true
+
+# rmtfs: 等 qcom_rmtfs_mem 出现才触发服务, 避免空转重试
+mkdir -p rootdir/etc/systemd/system/rmtfs.service.d/
+cat > rootdir/etc/systemd/system/rmtfs.service.d/qcom-rmtfs-udev.conf <<EOF
+[Unit]
+ConditionPathExists=/dev/qcom_rmtfs_mem1
+EOF
+install -m 644 scripts/99-qcom-rmtfs.rules rootdir/etc/udev/rules.d/
+
+# qcom-modem-setup (qcom-phone-utils) 与 UIM 脚本重复轮询 modem, 同样存在 45s 空等
+# 上限收短到 10s, 避免阻塞 ModemManager/多用户启动链
+sed -i 's/count -lt 45/count -lt 10/' rootdir/usr/bin/qcom-modem-setup 2>/dev/null || true
 
 # Venus VAAPI 驱动 (硬件视频解码/编码, snowf14k3/venus-vaapi-driver)
 if [ -f "$KERNEL_DEBS_DIR/venus-vaapi-driver.tar.gz" ]; then

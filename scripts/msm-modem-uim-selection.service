@@ -2,7 +2,9 @@
 Description=MSM Modem UIM Slot Selection
 Before=ModemManager.service
 After=rmtfs.service
+After=basic.target
 Requires=rmtfs.service
+OnFailure=msm-modem-uim-retry.service
 
 [Service]
 Type=notify

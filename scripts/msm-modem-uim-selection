@@ -23,8 +23,10 @@ fi
 
 # Prepare a qmicli command with desired modem path.
 # The modem may appear after some delay, wait for it.
+# Cap the wait so a stalled modem UIM service cannot block boot
+MODEM_WAIT_TIME="${MODEM_WAIT_TIME:-10}"
 count=0
-while [ -z "$QMICLI_MODEM" ] && [ "$count" -lt "45" ]
+while [ -z "$QMICLI_MODEM" ] && [ "$count" -lt "$MODEM_WAIT_TIME" ]
 do
 	# Check if legacy rpmsg exported device exists.
 	if [ -e "/dev/modem" ]

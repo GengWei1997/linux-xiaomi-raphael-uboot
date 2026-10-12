@@ -1,0 +1,8 @@
+[Unit]
+Description=Retry MSM Modem UIM Slot Selection
+StartLimitIntervalSec=600
+StartLimitBurst=3
+
+[Service]
+Type=simple
+ExecStart=/usr/libexec/msm-modem-uim-retry

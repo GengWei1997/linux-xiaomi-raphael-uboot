@@ -1,0 +1,2 @@
+# Trigger rmtfs.service when the qcom_rmtfs_mem device node appears
+ACTION=="add", KERNEL=="qcom_rmtfs_mem*", TAG+="systemd", ENV{SYSTEMD_WANTS}+="rmtfs.service"

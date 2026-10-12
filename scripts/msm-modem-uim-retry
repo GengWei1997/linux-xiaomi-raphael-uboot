@@ -1,0 +1,13 @@
+#!/bin/sh
+# Retry UIM slot selection after initial failure.
+# The modem firmware may need several 40s self-recovery cycles on cold boot;
+# retry every 60s so slot selection completes once the modem stabilizes,
+# then start ModemManager (it also pulls qcom-modem-setup).
+for i in 1 2 3 4; do
+    sleep 60
+    if systemctl start msm-modem-uim-selection.service; then
+        systemctl start ModemManager.service 2>/dev/null || true
+        exit 0
+    fi
+done
+exit 1
