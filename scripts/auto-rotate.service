@@ -1,0 +1,13 @@
+[Unit]
+Description=Auto rotate screen based on accelerometer orientation
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/auto-rotate.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

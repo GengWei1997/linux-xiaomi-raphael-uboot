@@ -1,0 +1,52 @@
+diff --git a/src/iio-sensor-proxy.c b/src/iio-sensor-proxy.c
+index 9a2d24b..f1c2e3a 100644
+--- a/src/iio-sensor-proxy.c
++++ b/src/iio-sensor-proxy.c
+@@ -123,6 +123,9 @@ driver_type_to_str (DriverType driver_type)
+ 	}
+ }
+ 
++static void send_driver_changed_dbus_event (SensorData *data, DriverType driver_type);
++
+ static gboolean
+ find_sensors (GUdevClient *client,
+ 	      SensorData  *data)
+@@ -150,15 +153,39 @@ find_sensors (GUdevClient *client,
+ 		for (i = 0; i < G_N_ELEMENTS(drivers); i++) {
+ 			SensorDriver *driver = (SensorDriver *) drivers[i];
+ 
+ 			if (!driver_type_exists (data, driver->type) &&
+ 			    driver_discover (driver, dev)) {
++				SensorDevice *sensor_device = NULL;
++
+ 				g_debug ("Found device %s of type %s at %s",
+ 					 g_udev_device_get_sysfs_path (dev),
+ 					 driver_type_to_str (driver->type),
+ 					 driver->driver_name);
+ 
+-				UDEV_DEVICE_FOR_TYPE(driver->type) = g_object_ref (dev);
+-				DRIVER_FOR_TYPE(driver->type) = (SensorDriver *) driver;
++				sensor_device = driver_open (driver, dev,
++					driver_type_to_callback_func (driver->type), data);
++
++				if (sensor_device) {
++					GHashTable *ht;
++
++					UDEV_DEVICE_FOR_TYPE(driver->type) = g_object_ref (dev);
++					DEVICE_FOR_TYPE(driver->type) = sensor_device;
++					DRIVER_FOR_TYPE(driver->type) = (SensorDriver *) driver;
++
++					ht = data->clients[driver->type];
++
++					if (g_hash_table_size (ht) > 0) {
++						SensorDevice *sd = DEVICE_FOR_TYPE(driver->type);
++						data->sensor_startup_dbus_event_delayed[driver->type] = TRUE;
++						driver_set_polling (sd, TRUE);
++					} else {
++						send_driver_changed_dbus_event (data, driver->type);
++					}
++				}
+ 
+ 				found = TRUE;
+ 			}
+ 		}

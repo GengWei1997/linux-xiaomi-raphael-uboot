@@ -93,6 +93,7 @@ echo "[$(date +'%Y-%m-%d %H:%M:%S')] ========================================== 
 "$SCRIPT_DIR/scripts/14-config-power-key.sh"
 "$SCRIPT_DIR/scripts/15-config-zram.sh"
 "$SCRIPT_DIR/scripts/16-config-audio.sh"
+"$SCRIPT_DIR/scripts/19-config-sensors.sh"
 "$SCRIPT_DIR/scripts/17-cleanup.sh"
 "$SCRIPT_DIR/scripts/18-finalize.sh"
 echo "[$(date +'%Y-%m-%d %H:%M:%S')] ========================================== 🎉 构建完成 🎉 =========================================="
