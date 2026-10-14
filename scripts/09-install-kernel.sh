@@ -126,6 +126,10 @@ done
 for fw in /lib/firmware/qcom/sm8150/Xiaomi/raphael/ipa*; do
     [ -e "$fw" ] && copy_file firmware "$fw"
 done
+
+for fw in /lib/firmware/qcom/sm8150/Xiaomi/raphael/sl*; do
+    [ -e "$fw" ] && copy_file firmware "$fw"
+done
 EOF
 else
     # ============ Ubuntu 方案 ============
@@ -172,6 +176,10 @@ for fw in /lib/firmware/qcom/sm8150/Xiaomi/raphael/cd*; do
 done
 
 for fw in /lib/firmware/qcom/sm8150/Xiaomi/raphael/ipa*; do
+    [ -e "$fw" ] && copy_file firmware "$fw"
+done
+
+for fw in /lib/firmware/qcom/sm8150/Xiaomi/raphael/sl*; do
     [ -e "$fw" ] && copy_file firmware "$fw"
 done
 EOF
