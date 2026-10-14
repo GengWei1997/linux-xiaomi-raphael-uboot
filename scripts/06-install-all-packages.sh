@@ -108,6 +108,9 @@ install -m 644 scripts/99-qcom-rmtfs.rules rootdir/etc/udev/rules.d/
 # 上限收短到 10s，避免阻塞 ModemManager/多用户启动链
 sed -i 's/count -lt 45/count -lt 10/' rootdir/usr/bin/qcom-modem-setup 2>/dev/null || true
 
+# 固定 Wi-Fi 接口名为 wlan0（udev net_id 会重命名成 wld0，导致 bootmac 无法设置 MAC）
+install -m 644 scripts/10-wlan0.link rootdir/etc/systemd/network/
+
 # Venus VAAPI 驱动（硬件视频解码/编码，snowf14k3/venus-vaapi-driver）
 if [ -f "$KERNEL_DEBS_DIR/venus-vaapi-driver.tar.gz" ]; then
     echo "[$(date +'%Y-%m-%d %H:%M:%S')]   └─ 构建并安装 Venus VAAPI 驱动"
