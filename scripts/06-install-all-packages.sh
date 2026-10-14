@@ -111,6 +111,13 @@ sed -i 's/count -lt 45/count -lt 10/' rootdir/usr/bin/qcom-modem-setup 2>/dev/nu
 # 固定 Wi-Fi 接口名为 wlan0（udev net_id 会重命名成 wld0，导致 bootmac 无法设置 MAC）
 install -m 644 scripts/10-wlan0.link rootdir/etc/systemd/network/
 
+# bootmac（qcom-phone-utils）优先用 SoC 序列号派生 MAC：
+# 内核 cmdline 无 serialno 时原脚本直接退 machine-id（每次刷机都会变化），
+# 而设备有硬件 SoC 序列号（/sys/devices/soc0/serial_number，刷机不变），
+# 在其间插入回退，保证每台设备 MAC 唯一且永久稳定
+sed -i 's|log "serial number not available, falling back to machine-id"|        SERIAL_NUMBER=$(cat /sys/devices/soc0/serial_number 2>/dev/null)\n    fi\n    if [ -z "$SERIAL_NUMBER" ]; then\n        log "serial number not available, falling back to machine-id"|' rootdir/usr/bin/bootmac 2>/dev/null || true
+
+
 # Venus VAAPI 驱动（硬件视频解码/编码，snowf14k3/venus-vaapi-driver）
 if [ -f "$KERNEL_DEBS_DIR/venus-vaapi-driver.tar.gz" ]; then
     echo "[$(date +'%Y-%m-%d %H:%M:%S')]   └─ 构建并安装 Venus VAAPI 驱动"
