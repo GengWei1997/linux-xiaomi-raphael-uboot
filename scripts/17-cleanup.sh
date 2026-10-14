@@ -88,9 +88,6 @@ exit 0
 EOF
 chmod +x rootdir/etc/kernel/postrm.d/zz-kernel-install
 
-echo "[$(date +'%Y-%m-%d %H:%M:%S')]   └─ 清理固件文件"
-rm -f rootdir/lib/firmware/reg* 2>/dev/null || true
-
 echo ""
 echo "========================================== 📋 配置文件预览 =========================================="
 
